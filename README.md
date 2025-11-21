@@ -1,73 +1,108 @@
-# React + TypeScript + Vite
+# saidan（裁断）
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+CSVファイルのカラム削除と行分割ができるWebアプリケーションです。
 
-Currently, two official plugins are available:
+## 機能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **CSVアップロード**: ドラッグ&ドロップまたはファイル選択でCSVファイルをアップロード
+- **カラム削除（裁断）**: カラム間の線をクリックして、その線より右側のカラムを削除
+  - ハサミアイコンで視覚的に裁断位置を確認
+  - 複数の線を選択して一度に複数のカラムを削除可能
+  - プレビュー機能で最初の10行を確認
+- **行分割**: 指定した行数ごとにCSVファイルを分割
+  - 分割結果のプレビュー表示
+  - 一括ダウンロード機能
+- **ダウンロード**: 処理済みのCSVファイルをダウンロード
+  - 単一ファイルのダウンロード
+  - 分割された複数ファイルの一括ダウンロード
 
-## React Compiler
+## 技術スタック
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/ui
+- PapaParse (CSV処理)
+- Docker + nginx (production)
 
-## Expanding the ESLint configuration
+## セットアップ
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### ローカル開発
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. 依存関係のインストール
+```bash
+pnpm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. 開発サーバーの起動
+```bash
+pnpm dev
+```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+3. ブラウザで `http://localhost:5173` を開く
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Docker Compose で起動
+
+1. イメージのビルドと起動
+```bash
+docker compose up --build
+```
+
+2. ブラウザで `http://localhost:3000` を開く
+
+### Production ビルド
+
+1. ビルド
+```bash
+pnpm build
+```
+
+2. プレビュー
+```bash
+pnpm preview
+```
+
+## 使用方法
+
+1. **CSVファイルのアップロード**
+   - ファイルをドラッグ&ドロップするか、「ファイルを選択」ボタンをクリック
+
+2. **カラム削除（裁断）モード**
+   - 「カラム削除（裁断）」タブを選択
+   - カラム間の線にマウスを合わせるとハサミアイコンが表示されます
+   - クリックして裁断位置を選択（複数選択可能）
+   - 「裁断を適用」ボタンをクリックして適用
+
+3. **行分割モード**
+   - 「行分割」タブを選択
+   - 1ファイルあたりの行数を入力
+   - 「分割実行」ボタンをクリック
+
+4. **ダウンロード**
+   - 「ダウンロード」ボタンをクリック
+   - 分割されたファイルの場合は、複数ファイルが順次ダウンロードされます
+
+## プロジェクト構造
+
+```
+saidan/
+├── src/
+│   ├── components/
+│   │   ├── ui/              # shadcn/uiコンポーネント
+│   │   ├── CsvUploader.tsx  # CSVアップロード
+│   │   ├── ColumnCutter.tsx # カラム削除（裁断）
+│   │   ├── RowSplitter.tsx # 行分割
+│   │   └── PreviewTable.tsx # プレビューテーブル
+│   ├── hooks/
+│   │   ├── useCsvProcessor.ts # CSV処理フック
+│   │   └── useDownload.ts     # ダウンロードフック
+│   ├── lib/
+│   │   └── utils.ts          # ユーティリティ関数
+│   ├── App.tsx
+│   └── main.tsx
+├── Dockerfile
+├── docker-compose.yml
+├── nginx.conf
+└── package.json
 ```
