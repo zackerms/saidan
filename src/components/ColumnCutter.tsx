@@ -10,6 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useSound } from '@/hooks/useSound'
+import { useSoundSetting } from '@/hooks/useSoundSetting'
 
 interface ColumnCutterProps {
   headers: string[]
@@ -26,6 +28,8 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
   const headerRefs = useRef<Map<number, HTMLTableCellElement>>(new Map())
   const maxRows = 10
   const displayRows = rows.slice(0, maxRows)
+  const { playSound } = useSound()
+  const { isEnabled: isSoundEnabled } = useSoundSetting()
 
   // カラムの位置を計算
   useEffect(() => {
@@ -79,10 +83,14 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
             return newAnimSet
           })
         }, 1000) // アニメーション時間に合わせる
+        // 音声を再生（設定が有効な場合のみ）
+        if (isSoundEnabled) {
+          playSound('/sounds/paper-cut.mp3')
+        }
       }
       return newSet
     })
-  }, [])
+  }, [isSoundEnabled, playSound])
 
   const applyCuts = useCallback(() => {
     if (selectedCutLines.size === 0) {

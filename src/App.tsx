@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { CsvUploader } from '@/components/CsvUploader'
 import { ColumnCutter } from '@/components/ColumnCutter'
 import { RowSplitter } from '@/components/RowSplitter'
+import { SettingsDialog } from '@/components/SettingsDialog'
 import { useDownload } from '@/hooks/useDownload'
 import { Download, Upload } from 'lucide-react'
 
@@ -66,8 +67,14 @@ function App() {
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold">saidan</h1>
+        <div className="flex items-center justify-between">
+          <div className="flex-1"></div>
+          <div className="text-center space-y-2 flex-1">
+            <h1 className="text-4xl font-bold">saidan</h1>
+          </div>
+          <div className="flex-1 flex justify-end">
+            <SettingsDialog />
+          </div>
         </div>
 
         {!csvData ? (
