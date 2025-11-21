@@ -6,7 +6,8 @@ import { ColumnCutter } from '@/components/ColumnCutter'
 import { RowSplitter } from '@/components/RowSplitter'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { useDownload } from '@/hooks/useDownload'
-import { Download, Upload } from 'lucide-react'
+import { useTheme } from '@/hooks/useTheme'
+import { Download, Upload, Sun, Moon, Monitor } from 'lucide-react'
 
 function App() {
   const [csvData, setCsvData] = useState<{ headers: string[]; rows: string[][] } | null>(null)
@@ -14,6 +15,27 @@ function App() {
   const [splitData, setSplitData] = useState<Array<{ headers: string[]; rows: string[][] }> | null>(null)
   const [originalFilename, setOriginalFilename] = useState<string | null>(null)
   const { downloadCsv, downloadMultiple } = useDownload()
+  const { theme, setTheme } = useTheme()
+
+  const handleThemeToggle = () => {
+    if (theme === 'light') {
+      setTheme('dark')
+    } else if (theme === 'dark') {
+      setTheme('system')
+    } else {
+      setTheme('light')
+    }
+  }
+
+  const getThemeIcon = () => {
+    if (theme === 'light') {
+      return <Sun className="h-5 w-5" />
+    } else if (theme === 'dark') {
+      return <Moon className="h-5 w-5" />
+    } else {
+      return <Monitor className="h-5 w-5" />
+    }
+  }
 
   const handleCsvLoaded = (data: { headers: string[]; rows: string[][] }, filename: string) => {
     setCsvData(data)
@@ -72,7 +94,17 @@ function App() {
           <div className="text-center space-y-2 flex-1">
             <h1 className="text-4xl font-bold">saidan</h1>
           </div>
-          <div className="flex-1 flex justify-end">
+          <div className="flex-1 flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full"
+              onClick={handleThemeToggle}
+              title={`テーマ: ${theme === 'light' ? 'ライト' : theme === 'dark' ? 'ダーク' : 'システム'}`}
+            >
+              {getThemeIcon()}
+              <span className="sr-only">テーマ切替</span>
+            </Button>
             <SettingsDialog />
           </div>
         </div>
@@ -95,8 +127,8 @@ function App() {
               <TabsContent value="column" className="mt-4">
                 {csvData && (
                   <ColumnCutter
-                    headers={csvData.headers}
-                    rows={csvData.rows}
+                    headers={processedData ? processedData.headers : csvData.headers}
+                    rows={processedData ? processedData.rows : csvData.rows}
                     onColumnsRemoved={handleColumnsRemoved}
                   />
                 )}
