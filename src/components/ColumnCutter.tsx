@@ -248,11 +248,11 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
               </p>
             )}
             <div className="flex gap-2">
-              <Button onClick={applyCuts} disabled={selectedCutLines.size === 0}>
-                サイダン！ 
-              </Button>
               <Button variant="outline" onClick={resetSelection} disabled={selectedCutLines.size === 0}>
                 選択をリセット
+              </Button>
+              <Button onClick={applyCuts} disabled={selectedCutLines.size === 0}>
+                サイダン！ 
               </Button>
             </div>
           </div>
