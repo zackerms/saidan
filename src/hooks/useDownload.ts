@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import Papa from 'papaparse'
+import JSZip from 'jszip'
 
 export function useDownload() {
   const downloadCsv = useCallback((headers: string[], rows: string[][], filename: string) => {
@@ -16,16 +17,34 @@ export function useDownload() {
     URL.revokeObjectURL(url)
   }, [])
 
-  const downloadMultiple = useCallback((
-    files: Array<{ headers: string[]; rows: string[][]; filename: string }>
+  const downloadMultiple = useCallback(async (
+    files: Array<{ headers: string[]; rows: string[][]; filename: string }>,
+    baseFilename?: string
   ) => {
-    // 少し遅延を入れて順次ダウンロード
-    files.forEach((file, index) => {
-      setTimeout(() => {
-        downloadCsv(file.headers, file.rows, file.filename)
-      }, index * 200) // 200ms間隔でダウンロード
+    // ZIPファイルを作成
+    const zip = new JSZip()
+    
+    // 各CSVファイルをZIPに追加
+    files.forEach((file) => {
+      const data = [file.headers, ...file.rows]
+      const csv = Papa.unparse(data)
+      zip.file(file.filename, csv)
     })
-  }, [downloadCsv])
+    
+    // ZIPファイルを生成してダウンロード
+    const zipBlob = await zip.generateAsync({ type: 'blob' })
+    const zipUrl = URL.createObjectURL(zipBlob)
+    const link = document.createElement('a')
+    link.href = zipUrl
+    const zipFilename = baseFilename 
+      ? `${baseFilename.replace(/\.csv$/i, '')}.zip`
+      : 'split_files.zip'
+    link.download = zipFilename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(zipUrl)
+  }, [])
 
   return {
     downloadCsv,

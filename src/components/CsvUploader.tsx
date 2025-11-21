@@ -1,22 +1,24 @@
-import { useRef, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect, useState } from 'react'
 import { Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useCsvProcessor } from '@/hooks/useCsvProcessor'
 
 interface CsvUploaderProps {
-  onCsvLoaded: (data: { headers: string[]; rows: string[][] }) => void
+  onCsvLoaded: (data: { headers: string[]; rows: string[][] }, filename: string) => void
 }
 
 export function CsvUploader({ onCsvLoaded }: CsvUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { csvData, parseCsv, error, isProcessing } = useCsvProcessor()
 
+  const [originalFilename, setOriginalFilename] = useState<string | null>(null)
+
   useEffect(() => {
-    if (csvData && !error) {
-      onCsvLoaded(csvData)
+    if (csvData && !error && originalFilename) {
+      onCsvLoaded(csvData, originalFilename)
     }
-  }, [csvData, error, onCsvLoaded])
+  }, [csvData, error, originalFilename, onCsvLoaded])
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -27,6 +29,7 @@ export function CsvUploader({ onCsvLoaded }: CsvUploaderProps) {
       return
     }
 
+    setOriginalFilename(file.name)
     parseCsv(file)
   }, [parseCsv])
 
@@ -40,6 +43,7 @@ export function CsvUploader({ onCsvLoaded }: CsvUploaderProps) {
       return
     }
 
+    setOriginalFilename(file.name)
     parseCsv(file)
   }, [parseCsv])
 

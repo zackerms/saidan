@@ -11,12 +11,14 @@ function App() {
   const [csvData, setCsvData] = useState<{ headers: string[]; rows: string[][] } | null>(null)
   const [processedData, setProcessedData] = useState<{ headers: string[]; rows: string[][] } | null>(null)
   const [splitData, setSplitData] = useState<Array<{ headers: string[]; rows: string[][] }> | null>(null)
+  const [originalFilename, setOriginalFilename] = useState<string | null>(null)
   const { downloadCsv, downloadMultiple } = useDownload()
 
-  const handleCsvLoaded = (data: { headers: string[]; rows: string[][] }) => {
+  const handleCsvLoaded = (data: { headers: string[]; rows: string[][] }, filename: string) => {
     setCsvData(data)
     setProcessedData(data)
     setSplitData(null)
+    setOriginalFilename(filename)
   }
 
   const handleColumnsRemoved = (newHeaders: string[], newRows: string[][]) => {
@@ -29,16 +31,20 @@ function App() {
 
   const handleDownload = () => {
     if (splitData && splitData.length > 0) {
-      // 分割されたファイルを一括ダウンロード
+      // 分割されたファイルをZIPで一括ダウンロード
+      const baseFilename = originalFilename 
+        ? originalFilename.replace(/\.csv$/i, '')
+        : 'split'
       const files = splitData.map((data, index) => ({
         headers: data.headers,
         rows: data.rows,
-        filename: `split_${index + 1}.csv`,
+        filename: `${baseFilename}_${index + 1}.csv`,
       }))
-      downloadMultiple(files)
+      downloadMultiple(files, originalFilename || 'split')
     } else if (processedData) {
       // 単一ファイルをダウンロード
-      downloadCsv(processedData.headers, processedData.rows, 'processed.csv')
+      const filename = originalFilename || 'processed.csv'
+      downloadCsv(processedData.headers, processedData.rows, filename)
     }
   }
 
@@ -46,6 +52,7 @@ function App() {
     setCsvData(null)
     setProcessedData(null)
     setSplitData(null)
+    setOriginalFilename(null)
   }
 
   return (
