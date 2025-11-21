@@ -16,22 +16,24 @@ function App() {
 
   const handleCsvLoaded = (data: { headers: string[]; rows: string[][] }, filename: string) => {
     setCsvData(data)
-    setProcessedData(data)
+    setProcessedData(null) // カラム削除が実行されるまでnullのまま
     setSplitData(null)
     setOriginalFilename(filename)
   }
 
   const handleColumnsRemoved = (newHeaders: string[], newRows: string[][]) => {
     setProcessedData({ headers: newHeaders, rows: newRows })
+    setSplitData(null) // カラム削除を実行したら行分割の結果をクリア
   }
 
   const handleSplit = (splits: Array<{ headers: string[]; rows: string[][] }>) => {
     setSplitData(splits)
+    setProcessedData(null) // 行分割を実行したらカラム削除の結果をクリア
   }
 
   const handleDownload = () => {
     if (splitData && splitData.length > 0) {
-      // 分割されたファイルをZIPで一括ダウンロード
+      // 分割されたファイルをダウンロード
       const baseFilename = originalFilename 
         ? originalFilename.replace(/\.csv$/i, '')
         : 'split'
@@ -42,9 +44,15 @@ function App() {
       }))
       downloadMultiple(files, originalFilename || 'split')
     } else if (processedData) {
-      // 単一ファイルをダウンロード
-      const filename = originalFilename || 'processed.csv'
+      // カラム削除後のファイルをダウンロード
+      const filename = originalFilename 
+        ? originalFilename.replace(/\.csv$/i, '_processed.csv')
+        : 'processed.csv'
       downloadCsv(processedData.headers, processedData.rows, filename)
+    } else if (csvData) {
+      // カラム削除が実行されていない場合は元のデータをダウンロード
+      const filename = originalFilename || 'data.csv'
+      downloadCsv(csvData.headers, csvData.rows, filename)
     }
   }
 
@@ -78,19 +86,19 @@ function App() {
                 <TabsTrigger value="split" className="rounded-full px-8 py-3 text-base">行分割</TabsTrigger>
               </TabsList>
               <TabsContent value="column" className="mt-4">
-                {processedData && (
+                {csvData && (
                   <ColumnCutter
-                    headers={processedData.headers}
-                    rows={processedData.rows}
+                    headers={csvData.headers}
+                    rows={csvData.rows}
                     onColumnsRemoved={handleColumnsRemoved}
                   />
                 )}
               </TabsContent>
               <TabsContent value="split" className="mt-4">
-                {processedData && (
+                {csvData && (
                   <RowSplitter
-                    headers={processedData.headers}
-                    rows={processedData.rows}
+                    headers={csvData.headers}
+                    rows={csvData.rows}
                     onSplit={handleSplit}
                   />
                 )}
@@ -112,7 +120,7 @@ function App() {
                 <Upload className="mr-2 h-5 w-5" />
                 別のファイルを編集
               </Button>
-              {(processedData || (splitData && splitData.length > 0)) && (
+              {csvData && (
                 <Button
                   onClick={handleDownload}
                   variant="default"
