@@ -154,8 +154,9 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                             onClick={() => handleCutLineClick(index)}
                             title="クリックして裁断"
                             style={{
-                              transform: 'translateX(50%)',
-                              borderRightWidth: '1px',
+                              transform: 'translateX(-50%)',
+                              width: '20px',
+                              borderRightWidth: '2px',
                             }}
                           />
                         )}
@@ -183,8 +184,9 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                               onClick={() => handleCutLineClick(cellIndex)}
                               title="クリックして裁断"
                               style={{
-                                transform: 'translateX(50%)',
-                                borderRightWidth: '1px',
+                                transform: 'translateX(-50%)',
+                                width: '20px',
+                                borderRightWidth: '2px',
                               }}
                             />
                           )}
@@ -201,12 +203,14 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
               if (!position) return null
               const isSelected = selectedCutLines.has(lineIndex)
               const isAnimating = animatingLines.has(lineIndex)
+              // 切り取り線の中心に合わせるため、10px（width: 20pxの半分）左に移動
+              const lineCenterPosition = position - 10
               return (
                 <div
                   key={lineIndex}
                   className="absolute top-0 pointer-events-none z-20"
                   style={{
-                    left: `${position}px`,
+                    left: `${lineCenterPosition}px`,
                     transform: 'translateX(-50%)',
                     height: '100%',
                   }}
