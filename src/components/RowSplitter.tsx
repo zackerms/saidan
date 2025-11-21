@@ -110,7 +110,7 @@ export function RowSplitter({ headers, rows, onSplit }: RowSplitterProps) {
                 placeholder="100"
               />
             </div>
-            <Button onClick={handleSplit}>分割実行</Button>
+            <Button onClick={handleSplit}>サイダン！</Button>
           </div>
 
           {splitData && (

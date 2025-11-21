@@ -123,8 +123,8 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
   return (
     <div className="space-y-4">
       <Card>
-        <CardContent>
-          <div className="relative" ref={tableRef}>
+        <CardContent className="relative">
+          <div className="relative mb-20" ref={tableRef}>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -154,6 +154,7 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                             onClick={() => handleCutLineClick(index)}
                             title="クリックして裁断"
                             style={{
+                              right: '0',
                               transform: 'translateX(-50%)',
                               width: '20px',
                               borderRightWidth: '2px',
@@ -184,6 +185,7 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                               onClick={() => handleCutLineClick(cellIndex)}
                               title="クリックして裁断"
                               style={{
+                                right: '0',
                                 transform: 'translateX(-50%)',
                                 width: '20px',
                                 borderRightWidth: '2px',
@@ -203,7 +205,7 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
               if (!position) return null
               const isSelected = selectedCutLines.has(lineIndex)
               const isAnimating = animatingLines.has(lineIndex)
-              // 切り取り線の中心に合わせるため、10px（width: 20pxの半分）左に移動
+              // 切り取り線の中心はカラムの右端から10px左（width: 20pxの半分）に配置されている
               const lineCenterPosition = position - 10
               return (
                 <div
@@ -222,12 +224,16 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                         animation: 'scissorsSlide 1s ease-in-out',
                       }}
                     >
-                      <Scissors className="h-3 w-3 text-red-500" />
+                      <div className="bg-background rounded-full p-1">
+                        <Scissors className="h-5 w-5 text-red-500" />
+                      </div>
                     </div>
                   )}
                   {!isAnimating && (
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                      <Scissors className={`h-3 w-3 ${isSelected ? 'text-red-500' : 'text-primary/40'}`} />
+                      <div className="bg-background rounded-full p-1">
+                        <Scissors className={`h-5 w-5 ${isSelected ? 'text-red-500' : 'text-primary/40'}`} />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -235,17 +241,24 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
             })}
           </div>
 
-          <div className="mt-4 flex gap-2">
-            <Button onClick={applyCuts} disabled={selectedCutLines.size === 0}>
-              裁断を適用
-            </Button>
-            <Button variant="outline" onClick={resetSelection} disabled={selectedCutLines.size === 0}>
-              選択をリセット
-            </Button>
+          <div className="absolute left-6 right-6 bottom-6 flex items-center justify-between">
+            {rows.length > maxRows && (
+              <p className="text-sm text-muted-foreground whitespace-nowrap">
+                プレビュー: 最初の{maxRows}行を表示（他 {rows.length - maxRows} 行が非表示）
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button onClick={applyCuts} disabled={selectedCutLines.size === 0}>
+                サイダン！ 
+              </Button>
+              <Button variant="outline" onClick={resetSelection} disabled={selectedCutLines.size === 0}>
+                選択をリセット
+              </Button>
+            </div>
           </div>
 
           {selectedCutLines.size > 0 && (
-            <div className="mt-4 p-3 bg-muted rounded text-sm">
+            <div className="mt-4 mb-20 p-3 bg-muted rounded text-sm">
               {Array.from(selectedCutLines).sort((a, b) => a - b).map((lineIndex, idx) => (
                 <span key={lineIndex}>
                   {idx > 0 && ', '}
@@ -263,11 +276,6 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
             </div>
           )}
 
-          {rows.length > maxRows && (
-            <p className="mt-4 text-sm text-muted-foreground">
-              プレビュー: 最初の{maxRows}行を表示（他 {rows.length - maxRows} 行が非表示）
-            </p>
-          )}
         </CardContent>
       </Card>
     </div>
