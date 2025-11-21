@@ -142,12 +142,12 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                         {header}
                         {index < headers.length - 1 && (
                           <div
-                            className={`absolute top-0 right-0 h-full w-1 cursor-pointer transition-all z-10 ${
+                            className={`absolute top-0 right-0 h-full cursor-pointer transition-all z-10 border-r ${
                               selectedCutLines.has(index)
-                                ? 'bg-red-500'
+                                ? 'border-red-500 border-solid'
                                 : hoveredLineIndex === index
-                                ? 'bg-primary/50'
-                                : 'bg-transparent'
+                                ? 'border-primary/70 border-dashed'
+                                : 'border-primary/30 border-dashed'
                             }`}
                             onMouseEnter={() => setHoveredLineIndex(index)}
                             onMouseLeave={() => setHoveredLineIndex(null)}
@@ -155,6 +155,7 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                             title="クリックして裁断"
                             style={{
                               transform: 'translateX(50%)',
+                              borderRightWidth: '1px',
                             }}
                           />
                         )}
@@ -170,12 +171,12 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                           {cell}
                           {cellIndex < headers.length - 1 && (
                             <div
-                              className={`absolute top-0 right-0 h-full w-1 cursor-pointer transition-all z-10 ${
+                              className={`absolute top-0 right-0 h-full cursor-pointer transition-all z-10 border-r ${
                                 selectedCutLines.has(cellIndex)
-                                  ? 'bg-red-500'
+                                  ? 'border-red-500 border-solid'
                                   : hoveredLineIndex === cellIndex
-                                  ? 'bg-primary/50'
-                                  : 'bg-transparent'
+                                  ? 'border-primary/70 border-dashed'
+                                  : 'border-primary/30 border-dashed'
                               }`}
                               onMouseEnter={() => setHoveredLineIndex(cellIndex)}
                               onMouseLeave={() => setHoveredLineIndex(null)}
@@ -183,6 +184,7 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                               title="クリックして裁断"
                               style={{
                                 transform: 'translateX(50%)',
+                                borderRightWidth: '1px',
                               }}
                             />
                           )}
@@ -193,10 +195,12 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                 </TableBody>
               </Table>
             </div>
-            {/* ハサミアイコンのアニメーション（テーブル全体の高さにわたって） */}
-            {Array.from(selectedCutLines).map((lineIndex) => {
+            {/* ハサミアイコンの表示（すべての切り取り線の中央に） */}
+            {Array.from({ length: headers.length - 1 }, (_, index) => index).map((lineIndex) => {
               const position = columnPositions.get(lineIndex)
               if (!position) return null
+              const isSelected = selectedCutLines.has(lineIndex)
+              const isAnimating = animatingLines.has(lineIndex)
               return (
                 <div
                   key={lineIndex}
@@ -207,19 +211,19 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                     height: '100%',
                   }}
                 >
-                  {animatingLines.has(lineIndex) && (
+                  {isAnimating && (
                     <div
                       className="absolute top-0 left-1/2 -translate-x-1/2"
                       style={{
                         animation: 'scissorsSlide 1s ease-in-out',
                       }}
                     >
-                      <Scissors className="h-6 w-6 text-red-500" />
+                      <Scissors className="h-3 w-3 text-red-500" />
                     </div>
                   )}
-                  {!animatingLines.has(lineIndex) && (
+                  {!isAnimating && (
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                      <Scissors className="h-6 w-6 text-red-500" />
+                      <Scissors className={`h-3 w-3 ${isSelected ? 'text-red-500' : 'text-primary/40'}`} />
                     </div>
                   )}
                 </div>
