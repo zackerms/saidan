@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Scissors } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -24,6 +24,7 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
   const [animatingLines, setAnimatingLines] = useState<Set<number>>(new Set())
   const [hoveredLineIndex, setHoveredLineIndex] = useState<number | null>(null)
   const [columnPositions, setColumnPositions] = useState<Map<number, number>>(new Map())
+  const [isInverted, setIsInverted] = useState<boolean>(false)
   const tableRef = useRef<HTMLDivElement>(null)
   const headerRefs = useRef<Map<number, HTMLTableCellElement>>(new Map())
   const maxRows = 10
@@ -98,12 +99,16 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
     }
 
     // 選択された線のインデックスから、削除するカラムのインデックスを計算
-    // 線のインデックスが i の場合、カラム i を削除（線の直前のカラム）
-    // 例: a-b間の線（インデックス0）を選択 → カラムa（インデックス0）を削除
+    // デフォルト: 線の直後のカラムを削除（例: a-b間の線 → カラムbを削除）
+    // 反転モード: 線の直前のカラムを削除（例: a-b間の線 → カラムaを削除）
     const columnsToRemove = new Set<number>()
     selectedCutLines.forEach(cutLineIndex => {
-      // cutLineIndex のカラムを削除（線の直前のカラム）
-      columnsToRemove.add(cutLineIndex)
+      // デフォルト: 線の直後のカラムを削除
+      // 反転モード: 線の直前のカラムを削除
+      const columnIndex = isInverted ? cutLineIndex : cutLineIndex + 1
+      if (columnIndex < headers.length) {
+        columnsToRemove.add(columnIndex)
+      }
     })
 
     // 新しいヘッダーと行を作成
@@ -113,12 +118,19 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
     onColumnsRemoved(newHeaders, newRows)
     setSelectedCutLines(new Set())
     setAnimatingLines(new Set())
-  }, [selectedCutLines, headers, rows, onColumnsRemoved])
+  }, [selectedCutLines, headers, rows, onColumnsRemoved, isInverted])
 
-  const resetSelection = useCallback(() => {
-    setSelectedCutLines(new Set())
-    setAnimatingLines(new Set())
-  }, [])
+  // 削除されるカラムのインデックスを計算
+  const columnsToRemove = useMemo(() => {
+    const columns = new Set<number>()
+    selectedCutLines.forEach(cutLineIndex => {
+      const columnIndex = isInverted ? cutLineIndex : cutLineIndex + 1
+      if (columnIndex < headers.length) {
+        columns.add(columnIndex)
+      }
+    })
+    return columns
+  }, [selectedCutLines, isInverted, headers.length])
 
   return (
     <div className="space-y-4">
@@ -139,6 +151,11 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                         }}
                         className="relative"
                       >
+                        {columnsToRemove.has(index) && (
+                          <div
+                            className="absolute top-0 left-0 right-0 h-full bg-red-500/10 pointer-events-none"
+                          />
+                        )}
                         {header}
                         {index < headers.length - 1 && (
                           <div
@@ -170,6 +187,11 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                     <TableRow key={rowIndex}>
                       {row.map((cell, cellIndex) => (
                         <TableCell key={cellIndex} className="relative">
+                          {columnsToRemove.has(cellIndex) && (
+                            <div
+                              className="absolute top-0 left-0 right-0 h-full bg-red-500/10 pointer-events-none"
+                            />
+                          )}
                           {cell}
                           {cellIndex < headers.length - 1 && (
                             <div
@@ -247,34 +269,18 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                 プレビュー: 最初の{maxRows}行を表示（他 {rows.length - maxRows} 行が非表示）
               </p>
             )}
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={resetSelection} disabled={selectedCutLines.size === 0}>
-                選択をリセット
+            <div className="flex gap-2 items-center">
+              <Button
+                variant={isInverted ? "default" : "outline"}
+                onClick={() => setIsInverted(!isInverted)}
+              >
+                ハンタイ
               </Button>
               <Button onClick={applyCuts} disabled={selectedCutLines.size === 0}>
                 サイダン！ 
               </Button>
             </div>
           </div>
-
-          {selectedCutLines.size > 0 && (
-            <div className="mt-4 mb-20 p-3 bg-muted rounded text-sm">
-              {Array.from(selectedCutLines).sort((a, b) => a - b).map((lineIndex, idx) => (
-                <span key={lineIndex}>
-                  {idx > 0 && ', '}
-                  {headers[lineIndex]} と {headers[lineIndex + 1]} の間
-                </span>
-              ))}
-              の線が選択されています。これらの線の直前のカラム（
-              {Array.from(selectedCutLines).sort((a, b) => a - b).map((lineIndex, idx) => (
-                <span key={lineIndex}>
-                  {idx > 0 && ', '}
-                  {headers[lineIndex]}
-                </span>
-              ))}
-              ）が削除されます。
-            </div>
-          )}
 
         </CardContent>
       </Card>
