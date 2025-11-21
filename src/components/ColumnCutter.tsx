@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Scissors } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -115,12 +115,6 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
-          <CardTitle>カラム削除（裁断）</CardTitle>
-          <CardDescription>
-            テーブルのカラム間の線をクリックすると、その線より右側のカラムが削除されます
-          </CardDescription>
-        </CardHeader>
         <CardContent>
           <div className="relative" ref={tableRef}>
             <div className="overflow-x-auto">

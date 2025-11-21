@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PreviewTable } from './PreviewTable'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 
 interface RowSplitterProps {
   headers: string[]
@@ -37,12 +37,6 @@ export function RowSplitter({ headers, rows, onSplit }: RowSplitterProps) {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
-          <CardTitle>行分割</CardTitle>
-          <CardDescription>
-            指定した行数ごとにCSVファイルを分割します
-          </CardDescription>
-        </CardHeader>
         <CardContent>
           <div className="flex gap-4 items-end">
             <div className="flex-1">
