@@ -232,7 +232,7 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
               return (
                 <div
                   key={lineIndex}
-                  className="absolute top-0 pointer-events-none z-20"
+                  className="absolute top-0 z-20"
                   style={{
                     left: `${lineCenterPosition}px`,
                     transform: 'translateX(-50%)',
@@ -241,10 +241,11 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                 >
                   {isAnimating && (
                     <div
-                      className="absolute top-0 left-1/2 -translate-x-1/2"
+                      className="absolute top-0 left-1/2 -translate-x-1/2 cursor-pointer"
                       style={{
                         animation: 'scissorsSlide 1s ease-in-out',
                       }}
+                      onClick={() => handleCutLineClick(lineIndex)}
                     >
                       <div className="bg-background rounded-full p-1">
                         <Scissors className="h-5 w-5 text-red-500" />
@@ -252,7 +253,10 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
                     </div>
                   )}
                   {!isAnimating && (
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <div 
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
+                      onClick={() => handleCutLineClick(lineIndex)}
+                    >
                       <div className="bg-background rounded-full p-1">
                         <Scissors className={`h-5 w-5 ${isSelected ? 'text-red-500' : 'text-primary/40'}`} />
                       </div>
