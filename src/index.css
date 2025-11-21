@@ -118,3 +118,36 @@
     @apply bg-background text-foreground font-sans;
   }
 }
+
+@keyframes scissorsSlide {
+  0% {
+    top: 0;
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% - 24px);
+    opacity: 0.8;
+  }
+}
+
+@layer utilities {
+  /* ニューモーフィズムスタイル - ライトモード */
+  .neumorphism {
+    background: var(--card);
+    box-shadow: 
+      8px 8px 16px rgba(0, 0, 0, 0.1),
+      -8px -8px 16px rgba(255, 255, 255, 0.8),
+      inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+      inset -1px -1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  /* ニューモーフィズムスタイル - ダークモード */
+  .dark .neumorphism {
+    background: var(--card);
+    box-shadow: 
+      8px 8px 16px rgba(0, 0, 0, 0.4),
+      -8px -8px 16px rgba(255, 255, 255, 0.05),
+      inset 1px 1px 2px rgba(255, 255, 255, 0.08),
+      inset -1px -1px 2px rgba(0, 0, 0, 0.3);
+  }
+}
