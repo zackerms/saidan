@@ -5,7 +5,7 @@ import { CsvUploader } from '@/components/CsvUploader'
 import { ColumnCutter } from '@/components/ColumnCutter'
 import { RowSplitter } from '@/components/RowSplitter'
 import { useDownload } from '@/hooks/useDownload'
-import { Download } from 'lucide-react'
+import { Download, Upload } from 'lucide-react'
 
 function App() {
   const [csvData, setCsvData] = useState<{ headers: string[]; rows: string[][] } | null>(null)
@@ -52,35 +52,17 @@ function App() {
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold">saidan（裁断）</h1>
-          <p className="text-muted-foreground">
-            CSVファイルのカラム削除と行分割ができるアプリケーション
-          </p>
+          <h1 className="text-4xl font-bold">saidan</h1>
         </div>
 
         {!csvData ? (
           <CsvUploader onCsvLoaded={handleCsvLoaded} />
         ) : (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  ファイル: {csvData.headers.length} カラム, {csvData.rows.length} 行
-                </p>
-              </div>
-              <div className="flex gap-2">
-                {(processedData || (splitData && splitData.length > 0)) && (
-                  <Button onClick={handleDownload} variant="default">
-                    <Download className="mr-2 h-4 w-4" />
-                    {splitData && splitData.length > 0
-                      ? `${splitData.length}個のファイルをダウンロード`
-                      : 'ダウンロード'}
-                  </Button>
-                )}
-                <Button onClick={handleReset} variant="outline">
-                  新しいファイルをアップロード
-                </Button>
-              </div>
+            <div>
+              <p className="text-sm text-muted-foreground">
+                ファイル: {csvData.headers.length} カラム, {csvData.rows.length} 行
+              </p>
             </div>
 
             <Tabs defaultValue="column" className="w-full">
@@ -107,6 +89,36 @@ function App() {
                 )}
               </TabsContent>
             </Tabs>
+          </div>
+        )}
+
+        {/* フローティングボタン */}
+        {csvData && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+            <div className="flex flex-row gap-3 p-4 rounded-full backdrop-blur-md bg-background/80 border border-border/50 shadow-lg">
+              <Button
+                onClick={handleReset}
+                variant="outline"
+                size="lg"
+                className="rounded-full transition-shadow bg-background/50"
+              >
+                <Upload className="mr-2 h-5 w-5" />
+                別のファイルを編集
+              </Button>
+              {(processedData || (splitData && splitData.length > 0)) && (
+                <Button
+                  onClick={handleDownload}
+                  variant="default"
+                  size="lg"
+                  className="rounded-full transition-shadow"
+                >
+                  <Download className="mr-2 h-5 w-5" />
+                  {splitData && splitData.length > 0
+                    ? `${splitData.length}個のファイルをダウンロード`
+                    : 'ダウンロード'}
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </div>
