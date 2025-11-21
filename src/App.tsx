@@ -84,9 +84,9 @@ function App() {
             </div>
 
             <Tabs defaultValue="column" className="w-full">
-              <TabsList>
-                <TabsTrigger value="column">カラム削除（裁断）</TabsTrigger>
-                <TabsTrigger value="split">行分割</TabsTrigger>
+              <TabsList className="mx-auto h-14 rounded-full p-1">
+                <TabsTrigger value="column" className="rounded-full px-8 py-3 text-base">カラム削除（裁断）</TabsTrigger>
+                <TabsTrigger value="split" className="rounded-full px-8 py-3 text-base">行分割</TabsTrigger>
               </TabsList>
               <TabsContent value="column" className="mt-4">
                 {processedData && (
