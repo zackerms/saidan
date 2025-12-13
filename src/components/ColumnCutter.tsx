@@ -16,10 +16,10 @@ import { useSoundSetting } from '@/hooks/useSoundSetting'
 interface ColumnCutterProps {
   headers: string[]
   rows: string[][]
-  onColumnsRemoved: (newHeaders: string[], newRows: string[][]) => void
+  onCutColumns: (selectedCutLines: Set<number>, isInverted: boolean) => void
 }
 
-export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterProps) {
+export function ColumnCutter({ headers, rows, onCutColumns }: ColumnCutterProps) {
   const [selectedCutLines, setSelectedCutLines] = useState<Set<number>>(new Set())
   const [animatingLines, setAnimatingLines] = useState<Set<number>>(new Set())
   const [hoveredLineIndex, setHoveredLineIndex] = useState<number | null>(null)
@@ -98,31 +98,10 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
       return
     }
 
-    // 選択された線のインデックスから、削除するカラムのインデックスを計算
-    // 複数線選択時は、最も左側の線（最小インデックス）を基準にする
-    const minCutLineIndex = Math.min(...Array.from(selectedCutLines))
-    const columnsToRemove = new Set<number>()
-
-    if (isInverted) {
-      // 反転モード: 選択線より左側のすべてのカラムを削除（0からcutLineIndexまで）
-      for (let i = 0; i <= minCutLineIndex; i++) {
-        columnsToRemove.add(i)
-      }
-    } else {
-      // デフォルトモード: 選択線より右側のすべてのカラムを削除（cutLineIndex + 1から最後まで）
-      for (let i = minCutLineIndex + 1; i < headers.length; i++) {
-        columnsToRemove.add(i)
-      }
-    }
-
-    // 新しいヘッダーと行を作成
-    const newHeaders = headers.filter((_, index) => !columnsToRemove.has(index))
-    const newRows = rows.map(row => row.filter((_, index) => !columnsToRemove.has(index)))
-
-    onColumnsRemoved(newHeaders, newRows)
+    onCutColumns(selectedCutLines, isInverted)
     setSelectedCutLines(new Set())
     setAnimatingLines(new Set())
-  }, [selectedCutLines, headers, rows, onColumnsRemoved, isInverted])
+  }, [selectedCutLines, isInverted, onCutColumns])
 
   // 削除されるカラムのインデックスを計算（プレビュー表示用）
   const columnsToRemove = useMemo(() => {

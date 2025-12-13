@@ -7,15 +7,24 @@ import { RowSplitter } from '@/components/RowSplitter'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { useDownload } from '@/hooks/useDownload'
 import { useTheme } from '@/hooks/useTheme'
+import { useCutter } from '@/hooks/useCutter'
 import { Download, Upload, Sun, Moon, Monitor } from 'lucide-react'
 
 function App() {
-  const [csvData, setCsvData] = useState<{ headers: string[]; rows: string[][] } | null>(null)
-  const [processedData, setProcessedData] = useState<{ headers: string[]; rows: string[][] } | null>(null)
-  const [splitData, setSplitData] = useState<Array<{ headers: string[]; rows: string[][] }> | null>(null)
   const [originalFilename, setOriginalFilename] = useState<string | null>(null)
   const { downloadCsv, downloadMultiple } = useDownload()
   const { theme, setTheme } = useTheme()
+  const {
+    originalData,
+    columnCutData,
+    rowSplitData,
+    currentData,
+    rowsPerFile,
+    setData,
+    cutColumns,
+    splitRows,
+    reset: resetCutter,
+  } = useCutter()
 
   const handleThemeToggle = () => {
     if (theme === 'light') {
@@ -38,51 +47,37 @@ function App() {
   }
 
   const handleCsvLoaded = (data: { headers: string[]; rows: string[][] }, filename: string) => {
-    setCsvData(data)
-    setProcessedData(null) // カラム削除が実行されるまでnullのまま
-    setSplitData(null)
+    setData(data)
     setOriginalFilename(filename)
   }
 
-  const handleColumnsRemoved = (newHeaders: string[], newRows: string[][]) => {
-    setProcessedData({ headers: newHeaders, rows: newRows })
-    setSplitData(null) // カラム削除を実行したら行分割の結果をクリア
-  }
-
-  const handleSplit = (splits: Array<{ headers: string[]; rows: string[][] }>) => {
-    setSplitData(splits)
-    setProcessedData(null) // 行分割を実行したらカラム削除の結果をクリア
-  }
-
   const handleDownload = () => {
-    if (splitData && splitData.length > 0) {
+    if (rowSplitData && rowSplitData.length > 0) {
       // 分割されたファイルをダウンロード
       const baseFilename = originalFilename 
         ? originalFilename.replace(/\.csv$/i, '')
         : 'split'
-      const files = splitData.map((data, index) => ({
+      const files = rowSplitData.map((data, index) => ({
         headers: data.headers,
         rows: data.rows,
         filename: `${baseFilename}_${index + 1}.csv`,
       }))
       downloadMultiple(files, originalFilename || 'split')
-    } else if (processedData) {
+    } else if (columnCutData) {
       // カラム削除後のファイルをダウンロード
       const filename = originalFilename 
         ? originalFilename.replace(/\.csv$/i, '_processed.csv')
         : 'processed.csv'
-      downloadCsv(processedData.headers, processedData.rows, filename)
-    } else if (csvData) {
+      downloadCsv(columnCutData.headers, columnCutData.rows, filename)
+    } else if (originalData) {
       // カラム削除が実行されていない場合は元のデータをダウンロード
       const filename = originalFilename || 'data.csv'
-      downloadCsv(csvData.headers, csvData.rows, filename)
+      downloadCsv(originalData.headers, originalData.rows, filename)
     }
   }
 
   const handleReset = () => {
-    setCsvData(null)
-    setProcessedData(null)
-    setSplitData(null)
+    resetCutter()
     setOriginalFilename(null)
   }
 
@@ -109,13 +104,13 @@ function App() {
           </div>
         </div>
 
-        {!csvData ? (
+        {!originalData ? (
           <CsvUploader onCsvLoaded={handleCsvLoaded} />
         ) : (
           <div className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground">
-                ファイル: {csvData.headers.length} カラム, {csvData.rows.length} 行
+                ファイル: {originalData.headers.length} カラム, {originalData.rows.length} 行
               </p>
             </div>
 
@@ -125,20 +120,22 @@ function App() {
                 <TabsTrigger value="split" className="rounded-full px-8 py-3 text-base">ヨコ</TabsTrigger>
               </TabsList>
               <TabsContent value="column" className="mt-4">
-                {csvData && (
+                {currentData && (
                   <ColumnCutter
-                    headers={processedData ? processedData.headers : csvData.headers}
-                    rows={processedData ? processedData.rows : csvData.rows}
-                    onColumnsRemoved={handleColumnsRemoved}
+                    headers={currentData.headers}
+                    rows={currentData.rows}
+                    onCutColumns={cutColumns}
                   />
                 )}
               </TabsContent>
               <TabsContent value="split" className="mt-4">
-                {csvData && (
+                {currentData && (
                   <RowSplitter
-                    headers={csvData.headers}
-                    rows={csvData.rows}
-                    onSplit={handleSplit}
+                    headers={currentData.headers}
+                    rows={currentData.rows}
+                    rowsPerFile={rowsPerFile}
+                    splitData={rowSplitData}
+                    onSplitRows={splitRows}
                   />
                 )}
               </TabsContent>
@@ -147,7 +144,7 @@ function App() {
         )}
 
         {/* フローティングボタン */}
-        {csvData && (
+        {originalData && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
             <div className="flex flex-row gap-3 p-4 rounded-full backdrop-blur-md bg-background/80 border border-border/50 shadow-lg">
               <Button
@@ -159,7 +156,7 @@ function App() {
                 <Upload className="mr-2 h-5 w-5" />
                 別のファイルを編集
               </Button>
-              {csvData && (
+              {originalData && (
                 <Button
                   onClick={handleDownload}
                   variant="default"
@@ -167,8 +164,8 @@ function App() {
                   className="rounded-full transition-shadow"
                 >
                   <Download className="mr-2 h-5 w-5" />
-                  {splitData && splitData.length > 0
-                    ? `${splitData.length}個のファイルをダウンロード`
+                  {rowSplitData && rowSplitData.length > 0
+                    ? `${rowSplitData.length}個のファイルをダウンロード`
                     : 'ダウンロード'}
                 </Button>
               )}

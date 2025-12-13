@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PreviewTable } from './PreviewTable'
@@ -8,34 +8,29 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 interface RowSplitterProps {
   headers: string[]
   rows: string[][]
-  onSplit: (splitData: Array<{ headers: string[]; rows: string[][] }>) => void
+  rowsPerFile: number
+  splitData: Array<{ headers: string[]; rows: string[][] }> | null
+  onSplitRows: (rowsPerFile: number) => void
 }
 
-export function RowSplitter({ headers, rows, onSplit }: RowSplitterProps) {
-  const [rowsPerFile, setRowsPerFile] = useState<number>(100)
-  const [splitData, setSplitData] = useState<Array<{ headers: string[]; rows: string[][] }> | null>(null)
+export function RowSplitter({ headers, rows, rowsPerFile, splitData, onSplitRows }: RowSplitterProps) {
+  const [localRowsPerFile, setLocalRowsPerFile] = useState<number>(rowsPerFile)
   const [currentPage, setCurrentPage] = useState<number>(1)
 
+  // rowsPerFileが変更されたらローカル状態を更新
+  useEffect(() => {
+    setLocalRowsPerFile(rowsPerFile)
+  }, [rowsPerFile])
+
   const handleSplit = useCallback(() => {
-    if (rowsPerFile <= 0) {
+    if (localRowsPerFile <= 0) {
       alert('1以上の数値を入力してください')
       return
     }
 
-    const splits: Array<{ headers: string[]; rows: string[][] }> = []
-    
-    for (let i = 0; i < rows.length; i += rowsPerFile) {
-      const chunk = rows.slice(i, i + rowsPerFile)
-      splits.push({
-        headers,
-        rows: chunk,
-      })
-    }
-
-    setSplitData(splits)
+    onSplitRows(localRowsPerFile)
     setCurrentPage(1) // 分割実行時にページを1にリセット
-    onSplit(splits)
-  }, [rowsPerFile, rows, headers, onSplit])
+  }, [localRowsPerFile, onSplitRows])
 
   // ページネーション用のページ番号リストを生成
   const pageNumbers = useMemo(() => {
@@ -105,8 +100,8 @@ export function RowSplitter({ headers, rows, onSplit }: RowSplitterProps) {
                 id="rowsPerFile"
                 type="number"
                 min="1"
-                value={rowsPerFile}
-                onChange={(e) => setRowsPerFile(Number.parseInt(e.target.value) || 0)}
+                value={localRowsPerFile}
+                onChange={(e) => setLocalRowsPerFile(Number.parseInt(e.target.value) || 0)}
                 placeholder="100"
               />
             </div>
