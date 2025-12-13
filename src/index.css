@@ -130,6 +130,17 @@
   }
 }
 
+@keyframes scissorsSlideHorizontal {
+  0% {
+    left: 0;
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - 24px);
+    opacity: 0.8;
+  }
+}
+
 @layer utilities {
   /* ニューモーフィズムスタイル - ライトモード */
   .neumorphism {

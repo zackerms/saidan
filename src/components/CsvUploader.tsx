@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useCsvProcessor } from '@/hooks/useCsvProcessor'
 
 interface CsvUploaderProps {
-  onCsvLoaded: (data: { headers: string[]; rows: string[][] }, filename: string) => void
+  onCsvLoaded: (data: { rows: string[][] }, filename: string) => void
 }
 
 export function CsvUploader({ onCsvLoaded }: CsvUploaderProps) {

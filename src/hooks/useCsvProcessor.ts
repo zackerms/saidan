@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react'
 import Papa from 'papaparse'
 
 export interface CsvData {
-  headers: string[]
   rows: string[][]
 }
 
@@ -29,10 +28,9 @@ export function useCsvProcessor() {
           return
         }
 
-        const headers = results.data[0] as string[]
-        const rows = results.data.slice(1) as string[][]
+        const rows = results.data as string[][]
 
-        setCsvData({ headers, rows })
+        setCsvData({ rows })
         setIsProcessing(false)
       },
       error: (error) => {

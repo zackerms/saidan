@@ -3,9 +3,8 @@ import Papa from 'papaparse'
 import JSZip from 'jszip'
 
 export function useDownload() {
-  const downloadCsv = useCallback((headers: string[], rows: string[][], filename: string) => {
-    const data = [headers, ...rows]
-    const csv = Papa.unparse(data)
+  const downloadCsv = useCallback((rows: string[][], filename: string) => {
+    const csv = Papa.unparse(rows)
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -18,7 +17,7 @@ export function useDownload() {
   }, [])
 
   const downloadMultiple = useCallback(async (
-    files: Array<{ headers: string[]; rows: string[][]; filename: string }>,
+    files: Array<{ rows: string[][]; filename: string }>,
     baseFilename?: string
   ) => {
     // ZIPファイルを作成
@@ -26,8 +25,7 @@ export function useDownload() {
     
     // 各CSVファイルをZIPに追加
     files.forEach((file) => {
-      const data = [file.headers, ...file.rows]
-      const csv = Papa.unparse(data)
+      const csv = Papa.unparse(file.rows)
       zip.file(file.filename, csv)
     })
     

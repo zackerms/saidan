@@ -6,8 +6,11 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card"
+      style={{
+        boxShadow: '10px 10px 0px 0px rgba(0, 0, 0, 0.1)',
+      }}
       className={cn(
-        "text-card-foreground flex flex-col gap-6 rounded-3xl py-6 neumorphism",
+        "text-card-foreground flex flex-col gap-6 rounded-lg py-6",
         className
       )}
       {...props}
