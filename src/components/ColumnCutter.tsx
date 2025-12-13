@@ -99,17 +99,21 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
     }
 
     // 選択された線のインデックスから、削除するカラムのインデックスを計算
-    // デフォルト: 線の直後のカラムを削除（例: a-b間の線 → カラムbを削除）
-    // 反転モード: 線の直前のカラムを削除（例: a-b間の線 → カラムaを削除）
+    // 複数線選択時は、最も左側の線（最小インデックス）を基準にする
+    const minCutLineIndex = Math.min(...Array.from(selectedCutLines))
     const columnsToRemove = new Set<number>()
-    selectedCutLines.forEach(cutLineIndex => {
-      // デフォルト: 線の直後のカラムを削除
-      // 反転モード: 線の直前のカラムを削除
-      const columnIndex = isInverted ? cutLineIndex : cutLineIndex + 1
-      if (columnIndex < headers.length) {
-        columnsToRemove.add(columnIndex)
+
+    if (isInverted) {
+      // 反転モード: 選択線より左側のすべてのカラムを削除（0からcutLineIndexまで）
+      for (let i = 0; i <= minCutLineIndex; i++) {
+        columnsToRemove.add(i)
       }
-    })
+    } else {
+      // デフォルトモード: 選択線より右側のすべてのカラムを削除（cutLineIndex + 1から最後まで）
+      for (let i = minCutLineIndex + 1; i < headers.length; i++) {
+        columnsToRemove.add(i)
+      }
+    }
 
     // 新しいヘッダーと行を作成
     const newHeaders = headers.filter((_, index) => !columnsToRemove.has(index))
@@ -120,15 +124,28 @@ export function ColumnCutter({ headers, rows, onColumnsRemoved }: ColumnCutterPr
     setAnimatingLines(new Set())
   }, [selectedCutLines, headers, rows, onColumnsRemoved, isInverted])
 
-  // 削除されるカラムのインデックスを計算
+  // 削除されるカラムのインデックスを計算（プレビュー表示用）
   const columnsToRemove = useMemo(() => {
+    if (selectedCutLines.size === 0) {
+      return new Set<number>()
+    }
+
+    // 複数線選択時は、最も左側の線（最小インデックス）を基準にする
+    const minCutLineIndex = Math.min(...Array.from(selectedCutLines))
     const columns = new Set<number>()
-    selectedCutLines.forEach(cutLineIndex => {
-      const columnIndex = isInverted ? cutLineIndex : cutLineIndex + 1
-      if (columnIndex < headers.length) {
-        columns.add(columnIndex)
+
+    if (isInverted) {
+      // 反転モード: 選択線より左側のすべてのカラムを削除（0からcutLineIndexまで）
+      for (let i = 0; i <= minCutLineIndex; i++) {
+        columns.add(i)
       }
-    })
+    } else {
+      // デフォルトモード: 選択線より右側のすべてのカラムを削除（cutLineIndex + 1から最後まで）
+      for (let i = minCutLineIndex + 1; i < headers.length; i++) {
+        columns.add(i)
+      }
+    }
+
     return columns
   }, [selectedCutLines, isInverted, headers.length])
 
