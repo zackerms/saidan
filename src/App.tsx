@@ -6,7 +6,7 @@ import { CsvUploader } from '@/components/CsvUploader';
 import { SplitterPreview } from '@/components/SplitterPreview';
 import { useDownload } from '@/hooks/useDownload';
 import { useTheme } from '@/hooks/useTheme';
-import { useCutter } from '@/hooks/useCutter';
+import { useCutter, type ProcessedData } from '@/hooks/useCutter';
 import {
   Download,
   Upload,
@@ -25,18 +25,15 @@ function App() {
     number | null
   >(null);
   const [localRowsPerFile, setLocalRowsPerFile] = useState<number>(100);
+  const [processedData, setProcessedData] = useState<ProcessedData | null>(
+    null
+  );
   const { downloadCsv, downloadMultiple } = useDownload();
   const { theme, setTheme } = useTheme();
   const {
     originalData,
-    rowCutData,
-    columnCutData,
-    rowSplitData,
-    setRowsPerFile,
     setData,
-    cutRows,
-    cutColumns,
-    splitRows,
+    processData,
     reset: resetCutter,
     revert,
   } = useCutter();
@@ -66,36 +63,38 @@ function App() {
     setOriginalFilename(filename);
     // 1ファイルあたりの行数の初期値を入力ファイルの行数に設定
     const initialRowsPerFile = data.rows.length;
-    setRowsPerFile(initialRowsPerFile);
     setLocalRowsPerFile(initialRowsPerFile);
     setLocalRowCutCount(0);
     setNumberOfColumnsToCut(null);
+    setProcessedData(null);
   };
 
   const handleDownload = () => {
-    if (rowSplitData && rowSplitData.length > 0) {
-      // 分割されたファイルをダウンロード
+    if (!processedData) {
+      // 処理が実行されていない場合は元のデータをダウンロード
+      if (originalData) {
+        const filename = originalFilename || 'data.csv';
+        downloadCsv(originalData.rows, filename);
+      }
+      return;
+    }
+
+    // 分割されたファイルをダウンロード
+    if (Array.isArray(processedData)) {
       const baseFilename = originalFilename
         ? originalFilename.replace(/\.csv$/i, '')
         : 'split';
-      const files = rowSplitData.map((data, index) => ({
+      const files = processedData.map((data, index) => ({
         rows: data.rows,
         filename: `${baseFilename}_${index + 1}.csv`,
       }));
       downloadMultiple(files, originalFilename || 'split');
-    } else if (columnCutData || rowCutData) {
-      // カラム削除または行カット後のファイルをダウンロード
-      const dataToDownload = columnCutData || rowCutData;
-      if (dataToDownload) {
-        const filename = originalFilename
-          ? originalFilename.replace(/\.csv$/i, '_processed.csv')
-          : 'processed.csv';
-        downloadCsv(dataToDownload.rows, filename);
-      }
-    } else if (originalData) {
-      // 処理が実行されていない場合は元のデータをダウンロード
-      const filename = originalFilename || 'data.csv';
-      downloadCsv(originalData.rows, filename);
+    } else {
+      // 単一ファイルをダウンロード
+      const filename = originalFilename
+        ? originalFilename.replace(/\.csv$/i, '_processed.csv')
+        : 'processed.csv';
+      downloadCsv(processedData.rows, filename);
     }
   };
 
@@ -104,6 +103,7 @@ function App() {
     setOriginalFilename(null);
     setLocalRowCutCount(0);
     setNumberOfColumnsToCut(null);
+    setProcessedData(null);
   };
 
   const handleRevert = () => {
@@ -111,6 +111,7 @@ function App() {
     setNumberOfColumnsToCut(null);
     setLocalRowCutCount(0);
     setIsRowCutSelected(false);
+    setProcessedData(null);
   };
 
   const handleRowCutLineClick = () => {
@@ -119,25 +120,12 @@ function App() {
   };
 
   const handleSaidan = () => {
-    const shouldCutRows = localRowCutCount > 0;
-    const shouldCutColumns =
-      numberOfColumnsToCut !== null && numberOfColumnsToCut > 0;
-    const shouldSplitRows = localRowsPerFile && localRowsPerFile > 0;
-
-    // 行カットを実行
-    if (shouldCutRows) {
-      cutRows(localRowCutCount);
-    }
-
-    // カラムカットを実行
-    if (shouldCutColumns) {
-      cutColumns(new Set([numberOfColumnsToCut]));
-    }
-
-    // 行分割を実行
-    if (shouldSplitRows) {
-      splitRows(localRowsPerFile);
-    }
+    const result = processData(
+      localRowCutCount,
+      numberOfColumnsToCut,
+      localRowsPerFile > 0 ? localRowsPerFile : null
+    );
+    setProcessedData(result);
   };
 
   const getSaidanButtonDisabled = () => {
@@ -195,7 +183,7 @@ function App() {
             </div>
 
             {/* フォーム（画面下部） */}
-            {originalData && !columnCutData && !rowCutData && !rowSplitData && (
+            {originalData && !processedData && (
               <Card>
                 <CardContent className="pt-6">
                   <div className="space-y-4">
@@ -273,7 +261,7 @@ function App() {
             )}
 
             {/* アクションボタン */}
-            {(columnCutData || rowCutData || rowSplitData) && (
+            {processedData && (
               <Card>
                 <CardContent>
                   <div className="space-y-3">
@@ -284,8 +272,8 @@ function App() {
                       className="w-full rounded-full"
                     >
                       <Download className="mr-2 h-5 w-5" />
-                      {rowSplitData && rowSplitData.length > 0
-                        ? `${rowSplitData.length}個のファイルをダウンロード`
+                      {Array.isArray(processedData) && processedData.length > 0
+                        ? `${processedData.length}個のファイルをダウンロード`
                         : 'ダウンロード'}
                     </Button>
                     <Button
