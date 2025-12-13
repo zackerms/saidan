@@ -116,29 +116,40 @@ export function SplitterPreview({
   }, [rowCutCount, displayRows, displayStartIndex, rows.length])
 
   const handleColumnCutLineClick = useCallback((index: number) => {
+    const isCurrentlySelected = selectedColumnCutLines.has(index)
     onColumnCutLineClick(index)
+    
+    // 解除時はアニメーションと音を再生しない
+    if (isCurrentlySelected) {
+      return
+    }
+    
+    // 追加時のみアニメーションと音を再生
     setAnimatingColumnLines(prev => {
       const newSet = new Set(prev)
-      if (newSet.has(index)) {
-        newSet.delete(index)
-      } else {
-        newSet.add(index)
-        setTimeout(() => {
-          setAnimatingColumnLines(prevAnim => {
-            const newAnimSet = new Set(prevAnim)
-            newAnimSet.delete(index)
-            return newAnimSet
-          })
-        }, 1000)
-        if (isSoundEnabled) {
-          playSound('/sounds/paper-cut.mp3')
-        }
-      }
+      newSet.add(index)
+      setTimeout(() => {
+        setAnimatingColumnLines(prevAnim => {
+          const newAnimSet = new Set(prevAnim)
+          newAnimSet.delete(index)
+          return newAnimSet
+        })
+      }, 1000)
       return newSet
     })
-  }, [onColumnCutLineClick, isSoundEnabled, playSound])
+    if (isSoundEnabled) {
+      playSound('/sounds/paper-cut.mp3')
+    }
+  }, [onColumnCutLineClick, isSoundEnabled, playSound, selectedColumnCutLines])
 
   const handleRowCutLineClick = useCallback(() => {
+    // 解除時はアニメーションと音を再生しない
+    if (isRowCutSelected) {
+      onRowCutLineClick()
+      return
+    }
+    
+    // 追加時のみアニメーションと音を再生
     onRowCutLineClick()
     setAnimatingRowLine(true)
     setTimeout(() => {
@@ -147,7 +158,7 @@ export function SplitterPreview({
     if (isSoundEnabled) {
       playSound('/sounds/paper-cut.mp3')
     }
-  }, [onRowCutLineClick, isSoundEnabled, playSound])
+  }, [onRowCutLineClick, isSoundEnabled, playSound, isRowCutSelected])
 
   // 削除されるカラムのインデックスを計算（プレビュー表示用）
   const columnsToRemove = useMemo(() => {
