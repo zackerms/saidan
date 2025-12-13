@@ -36,8 +36,7 @@ export function useCutter() {
 
   // カラム削除処理
   const cutColumns = useCallback((
-    selectedCutLines: Set<number>,
-    isInverted: boolean
+    selectedCutLines: Set<number>
   ) => {
     if (!currentData || selectedCutLines.size === 0) {
       return
@@ -50,16 +49,9 @@ export function useCutter() {
     const minCutLineIndex = Math.min(...Array.from(selectedCutLines))
     const columnsToRemove = new Set<number>()
 
-    if (isInverted) {
-      // 反転モード: 選択線より左側のすべてのカラムを削除（0からcutLineIndexまで）
-      for (let i = 0; i <= minCutLineIndex; i++) {
-        columnsToRemove.add(i)
-      }
-    } else {
-      // デフォルトモード: 選択線より右側のすべてのカラムを削除（cutLineIndex + 1から最後まで）
-      for (let i = minCutLineIndex + 1; i < headers.length; i++) {
-        columnsToRemove.add(i)
-      }
+    // 選択線より右側のすべてのカラムを削除（cutLineIndex + 1から最後まで）
+    for (let i = minCutLineIndex + 1; i < headers.length; i++) {
+      columnsToRemove.add(i)
     }
 
     // 新しいヘッダーと行を作成
@@ -112,6 +104,12 @@ export function useCutter() {
     setRowsPerFile(100)
   }, [])
 
+  // 処理を取り消して元の状態に戻す
+  const revert = useCallback(() => {
+    setColumnCutData(null)
+    setRowSplitData(null)
+  }, [])
+
   return {
     originalData,
     columnCutData,
@@ -122,6 +120,7 @@ export function useCutter() {
     cutColumns,
     splitRows,
     reset,
+    revert,
   }
 }
 

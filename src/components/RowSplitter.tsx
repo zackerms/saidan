@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PreviewTable } from './PreviewTable'
@@ -11,9 +11,16 @@ interface RowSplitterProps {
   rowsPerFile: number
   splitData: Array<{ headers: string[]; rows: string[][] }> | null
   onSplitRows: (rowsPerFile: number) => void
+  onRowsPerFileChange?: (rowsPerFile: number) => void
 }
 
-export function RowSplitter({ headers, rows, rowsPerFile, splitData, onSplitRows }: RowSplitterProps) {
+export interface RowSplitterHandle {
+  applySplit: () => void
+  getRowsPerFile: () => number
+}
+
+export const RowSplitter = forwardRef<RowSplitterHandle, RowSplitterProps>(
+  ({ headers, rows, rowsPerFile, splitData, onSplitRows, onRowsPerFileChange }, ref) => {
   const [localRowsPerFile, setLocalRowsPerFile] = useState<number>(rowsPerFile)
   const [currentPage, setCurrentPage] = useState<number>(1)
 
@@ -31,6 +38,12 @@ export function RowSplitter({ headers, rows, rowsPerFile, splitData, onSplitRows
     onSplitRows(localRowsPerFile)
     setCurrentPage(1) // 分割実行時にページを1にリセット
   }, [localRowsPerFile, onSplitRows])
+
+  // 親から呼び出せるようにする
+  useImperativeHandle(ref, () => ({
+    applySplit: handleSplit,
+    getRowsPerFile: () => localRowsPerFile,
+  }), [handleSplit, localRowsPerFile])
 
   // ページネーション用のページ番号リストを生成
   const pageNumbers = useMemo(() => {
@@ -101,11 +114,16 @@ export function RowSplitter({ headers, rows, rowsPerFile, splitData, onSplitRows
                 type="number"
                 min="1"
                 value={localRowsPerFile}
-                onChange={(e) => setLocalRowsPerFile(Number.parseInt(e.target.value) || 0)}
+                onChange={(e) => {
+                  const value = Number.parseInt(e.target.value) || 0
+                  setLocalRowsPerFile(value)
+                  if (onRowsPerFileChange) {
+                    onRowsPerFileChange(value)
+                  }
+                }}
                 placeholder="100"
               />
             </div>
-            <Button onClick={handleSplit}>サイダン！</Button>
           </div>
 
           {splitData && (
@@ -177,5 +195,7 @@ export function RowSplitter({ headers, rows, rowsPerFile, splitData, onSplitRows
       )}
     </div>
   )
-}
+})
+
+RowSplitter.displayName = 'RowSplitter'
 

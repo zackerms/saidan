@@ -1,17 +1,22 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { CsvUploader } from '@/components/CsvUploader'
-import { ColumnCutter } from '@/components/ColumnCutter'
-import { RowSplitter } from '@/components/RowSplitter'
+import { ColumnCutter, type ColumnCutterHandle } from '@/components/ColumnCutter'
+import { RowSplitter, type RowSplitterHandle } from '@/components/RowSplitter'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { useDownload } from '@/hooks/useDownload'
 import { useTheme } from '@/hooks/useTheme'
 import { useCutter } from '@/hooks/useCutter'
-import { Download, Upload, Sun, Moon, Monitor } from 'lucide-react'
+import { Download, Upload, Sun, Moon, Monitor, Scissors, RotateCcw } from 'lucide-react'
 
 function App() {
   const [originalFilename, setOriginalFilename] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<string>('column')
+  const [selectedCutLines, setSelectedCutLines] = useState<Set<number>>(new Set())
+  const [localRowsPerFile, setLocalRowsPerFile] = useState<number>(100)
+  const columnCutterRef = useRef<ColumnCutterHandle>(null)
+  const rowSplitterRef = useRef<RowSplitterHandle>(null)
   const { downloadCsv, downloadMultiple } = useDownload()
   const { theme, setTheme } = useTheme()
   const {
@@ -24,6 +29,7 @@ function App() {
     cutColumns,
     splitRows,
     reset: resetCutter,
+    revert,
   } = useCutter()
 
   const handleThemeToggle = () => {
@@ -81,6 +87,30 @@ function App() {
     setOriginalFilename(null)
   }
 
+  const handleRevert = () => {
+    revert()
+    setSelectedCutLines(new Set())
+  }
+
+  const handleSaidan = () => {
+    if (activeTab === 'column') {
+      // タテ（カラム削除）の場合
+      columnCutterRef.current?.applyCuts()
+    } else if (activeTab === 'split') {
+      // ヨコ（行分割）の場合
+      rowSplitterRef.current?.applySplit()
+    }
+  }
+
+  const getSaidanButtonDisabled = () => {
+    if (activeTab === 'column') {
+      return selectedCutLines.size === 0
+    } else if (activeTab === 'split') {
+      return !localRowsPerFile || localRowsPerFile <= 0
+    }
+    return true
+  }
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -114,7 +144,7 @@ function App() {
               </p>
             </div>
 
-            <Tabs defaultValue="column" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="mx-auto h-14 rounded-full p-1">
                 <TabsTrigger value="column" className="rounded-full px-8 py-3 text-base">タテ</TabsTrigger>
                 <TabsTrigger value="split" className="rounded-full px-8 py-3 text-base">ヨコ</TabsTrigger>
@@ -122,20 +152,25 @@ function App() {
               <TabsContent value="column" className="mt-4">
                 {currentData && (
                   <ColumnCutter
+                    ref={columnCutterRef}
                     headers={currentData.headers}
                     rows={currentData.rows}
                     onCutColumns={cutColumns}
+                    onSelectionChange={setSelectedCutLines}
+                    initialSelectedCutLines={selectedCutLines}
                   />
                 )}
               </TabsContent>
               <TabsContent value="split" className="mt-4">
                 {currentData && (
                   <RowSplitter
+                    ref={rowSplitterRef}
                     headers={currentData.headers}
                     rows={currentData.rows}
                     rowsPerFile={rowsPerFile}
                     splitData={rowSplitData}
                     onSplitRows={splitRows}
+                    onRowsPerFileChange={setLocalRowsPerFile}
                   />
                 )}
               </TabsContent>
@@ -144,7 +179,7 @@ function App() {
         )}
 
         {/* フローティングボタン */}
-        {originalData && (
+        {(columnCutData || rowSplitData) && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
             <div className="flex flex-row gap-3 p-4 rounded-full backdrop-blur-md bg-background/80 border border-border/50 shadow-lg">
               <Button
@@ -156,19 +191,44 @@ function App() {
                 <Upload className="mr-2 h-5 w-5" />
                 別のファイルを編集
               </Button>
-              {originalData && (
-                <Button
-                  onClick={handleDownload}
-                  variant="default"
-                  size="lg"
-                  className="rounded-full transition-shadow"
-                >
-                  <Download className="mr-2 h-5 w-5" />
-                  {rowSplitData && rowSplitData.length > 0
-                    ? `${rowSplitData.length}個のファイルをダウンロード`
-                    : 'ダウンロード'}
-                </Button>
-              )}
+              <Button
+                onClick={handleRevert}
+                variant="outline"
+                size="lg"
+                className="rounded-full transition-shadow bg-background/50"
+              >
+                <RotateCcw className="mr-2 h-5 w-5" />
+                もとに戻す
+              </Button>
+              <Button
+                onClick={handleDownload}
+                variant="default"
+                size="lg"
+                className="rounded-full transition-shadow"
+              >
+                <Download className="mr-2 h-5 w-5" />
+                {rowSplitData && rowSplitData.length > 0
+                  ? `${rowSplitData.length}個のファイルをダウンロード`
+                  : 'ダウンロード'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* サイダンボタン（サイダン実行前のみ表示） */}
+        {originalData && !columnCutData && !rowSplitData && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+            <div className="flex flex-row gap-3 p-4 rounded-full backdrop-blur-md bg-background/80 border border-border/50 shadow-lg">
+              <Button
+                onClick={handleSaidan}
+                disabled={getSaidanButtonDisabled()}
+                variant="default"
+                size="lg"
+                className="rounded-full transition-shadow"
+              >
+                <Scissors className="mr-2 h-5 w-5" />
+                サイダン！
+              </Button>
             </div>
           </div>
         )}

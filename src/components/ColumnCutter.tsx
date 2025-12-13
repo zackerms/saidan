@@ -1,6 +1,5 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { Scissors } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
@@ -16,21 +15,54 @@ import { useSoundSetting } from '@/hooks/useSoundSetting'
 interface ColumnCutterProps {
   headers: string[]
   rows: string[][]
-  onCutColumns: (selectedCutLines: Set<number>, isInverted: boolean) => void
+  onCutColumns: (selectedCutLines: Set<number>) => void
+  onSelectionChange?: (selectedCutLines: Set<number>) => void
+  initialSelectedCutLines?: Set<number>
 }
 
-export function ColumnCutter({ headers, rows, onCutColumns }: ColumnCutterProps) {
-  const [selectedCutLines, setSelectedCutLines] = useState<Set<number>>(new Set())
+export interface ColumnCutterHandle {
+  applyCuts: () => void
+  getSelectedCutLines: () => Set<number>
+}
+
+export const ColumnCutter = forwardRef<ColumnCutterHandle, ColumnCutterProps>(
+  ({ headers, rows, onCutColumns, onSelectionChange, initialSelectedCutLines }, ref) => {
+  // 親から渡された初期選択状態を使用（タブ切り替え時も状態を保持）
+  const [selectedCutLines, setSelectedCutLines] = useState<Set<number>>(() => 
+    initialSelectedCutLines ? new Set(initialSelectedCutLines) : new Set()
+  )
   const [animatingLines, setAnimatingLines] = useState<Set<number>>(new Set())
   const [hoveredLineIndex, setHoveredLineIndex] = useState<number | null>(null)
   const [columnPositions, setColumnPositions] = useState<Map<number, number>>(new Map())
-  const [isInverted, setIsInverted] = useState<boolean>(false)
   const tableRef = useRef<HTMLDivElement>(null)
   const headerRefs = useRef<Map<number, HTMLTableCellElement>>(new Map())
+  const prevInitialSelectedCutLinesRef = useRef<Set<number> | undefined>(initialSelectedCutLines)
   const maxRows = 10
   const displayRows = rows.slice(0, maxRows)
   const { playSound } = useSound()
   const { isEnabled: isSoundEnabled } = useSoundSetting()
+
+  // 親から渡された初期選択状態と同期（実際に変更があった場合のみ更新）
+  // このケースでは、親から渡されたpropsの変更に応じて状態を更新する必要があるため、
+  // useEffect内でsetStateを呼び出すのが適切です
+  useEffect(() => {
+    if (initialSelectedCutLines !== undefined) {
+      const prevSet = prevInitialSelectedCutLinesRef.current
+      const newSet = new Set(initialSelectedCutLines)
+      
+      // 前の値と比較して、変更があった場合のみ更新
+      if (!prevSet || 
+          prevSet.size !== newSet.size || 
+          Array.from(prevSet).some(val => !newSet.has(val)) ||
+          Array.from(newSet).some(val => !prevSet.has(val))) {
+        // 親から渡されたpropsの変更に応じて状態を更新する必要があるため、
+        // このケースではuseEffect内でsetStateを呼び出すのが適切です
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelectedCutLines(newSet)
+        prevInitialSelectedCutLinesRef.current = newSet
+      }
+    }
+  }, [initialSelectedCutLines])
 
   // カラムの位置を計算
   useEffect(() => {
@@ -89,19 +121,33 @@ export function ColumnCutter({ headers, rows, onCutColumns }: ColumnCutterProps)
           playSound('/sounds/paper-cut.mp3')
         }
       }
+      // 選択状態の変化を親に通知
+      if (onSelectionChange) {
+        onSelectionChange(newSet)
+      }
       return newSet
     })
-  }, [isSoundEnabled, playSound])
+  }, [isSoundEnabled, playSound, onSelectionChange])
 
+  // 外部から呼び出される裁断実行関数
   const applyCuts = useCallback(() => {
     if (selectedCutLines.size === 0) {
       return
     }
 
-    onCutColumns(selectedCutLines, isInverted)
+    onCutColumns(selectedCutLines)
     setSelectedCutLines(new Set())
     setAnimatingLines(new Set())
-  }, [selectedCutLines, isInverted, onCutColumns])
+    if (onSelectionChange) {
+      onSelectionChange(new Set())
+    }
+  }, [selectedCutLines, onCutColumns, onSelectionChange])
+
+  // 親から呼び出せるようにする
+  useImperativeHandle(ref, () => ({
+    applyCuts,
+    getSelectedCutLines: () => selectedCutLines,
+  }), [applyCuts, selectedCutLines])
 
   // 削除されるカラムのインデックスを計算（プレビュー表示用）
   const columnsToRemove = useMemo(() => {
@@ -113,20 +159,13 @@ export function ColumnCutter({ headers, rows, onCutColumns }: ColumnCutterProps)
     const minCutLineIndex = Math.min(...Array.from(selectedCutLines))
     const columns = new Set<number>()
 
-    if (isInverted) {
-      // 反転モード: 選択線より左側のすべてのカラムを削除（0からcutLineIndexまで）
-      for (let i = 0; i <= minCutLineIndex; i++) {
-        columns.add(i)
-      }
-    } else {
-      // デフォルトモード: 選択線より右側のすべてのカラムを削除（cutLineIndex + 1から最後まで）
-      for (let i = minCutLineIndex + 1; i < headers.length; i++) {
-        columns.add(i)
-      }
+    // 選択線より右側のすべてのカラムを削除（cutLineIndex + 1から最後まで）
+    for (let i = minCutLineIndex + 1; i < headers.length; i++) {
+      columns.add(i)
     }
 
     return columns
-  }, [selectedCutLines, isInverted, headers.length])
+  }, [selectedCutLines, headers.length])
 
   return (
     <div className="space-y-4">
@@ -269,22 +308,13 @@ export function ColumnCutter({ headers, rows, onCutColumns }: ColumnCutterProps)
                 プレビュー: 最初の{maxRows}行を表示（他 {rows.length - maxRows} 行が非表示）
               </p>
             )}
-            <div className="flex gap-2 items-center">
-              <Button
-                variant={isInverted ? "default" : "outline"}
-                onClick={() => setIsInverted(!isInverted)}
-              >
-                ハンタイ
-              </Button>
-              <Button onClick={applyCuts} disabled={selectedCutLines.size === 0}>
-                サイダン！ 
-              </Button>
-            </div>
           </div>
 
         </CardContent>
       </Card>
     </div>
   )
-}
+})
+
+ColumnCutter.displayName = 'ColumnCutter'
 
