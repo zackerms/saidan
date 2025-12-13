@@ -116,6 +116,7 @@ export function useCutter() {
     rowSplitData,
     currentData,
     rowsPerFile,
+    setRowsPerFile,
     setData,
     cutColumns,
     splitRows,

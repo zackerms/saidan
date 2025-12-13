@@ -59,9 +59,6 @@ export function PreviewTable({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>プレビュー（最初の{maxRows}行）</CardTitle>
-      </CardHeader>
       <CardContent>
         <div className="relative overflow-x-auto" ref={tableRef}>
           <Table>

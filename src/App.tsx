@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CsvUploader } from '@/components/CsvUploader'
 import { ColumnCutter, type ColumnCutterHandle } from '@/components/ColumnCutter'
 import { RowSplitter, type RowSplitterHandle } from '@/components/RowSplitter'
@@ -12,9 +12,9 @@ import { Download, Upload, Sun, Moon, Monitor, Scissors, RotateCcw } from 'lucid
 
 function App() {
   const [originalFilename, setOriginalFilename] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<string>('column')
   const [selectedCutLines, setSelectedCutLines] = useState<Set<number>>(new Set())
   const [localRowsPerFile, setLocalRowsPerFile] = useState<number>(100)
+  const [pendingRowSplit, setPendingRowSplit] = useState<boolean>(false)
   const columnCutterRef = useRef<ColumnCutterHandle>(null)
   const rowSplitterRef = useRef<RowSplitterHandle>(null)
   const { downloadCsv, downloadMultiple } = useDownload()
@@ -25,6 +25,7 @@ function App() {
     rowSplitData,
     currentData,
     rowsPerFile,
+    setRowsPerFile,
     setData,
     cutColumns,
     splitRows,
@@ -55,6 +56,10 @@ function App() {
   const handleCsvLoaded = (data: { headers: string[]; rows: string[][] }, filename: string) => {
     setData(data)
     setOriginalFilename(filename)
+    // 1ファイルあたりの行数の初期値を入力ファイルの行数に設定
+    const initialRowsPerFile = data.rows.length
+    setRowsPerFile(initialRowsPerFile)
+    setLocalRowsPerFile(initialRowsPerFile)
   }
 
   const handleDownload = () => {
@@ -92,23 +97,38 @@ function App() {
     setSelectedCutLines(new Set())
   }
 
+  // タテの処理完了後にヨコの処理を実行
+  useEffect(() => {
+    if (pendingRowSplit && columnCutData && localRowsPerFile && localRowsPerFile > 0) {
+      // 次のレンダリングサイクルで実行
+      const timeoutId = setTimeout(() => {
+        rowSplitterRef.current?.applySplit()
+        setPendingRowSplit(false)
+      }, 0)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [columnCutData, pendingRowSplit, localRowsPerFile])
+
   const handleSaidan = () => {
-    if (activeTab === 'column') {
-      // タテ（カラム削除）の場合
+    const shouldCutColumns = selectedCutLines.size > 0
+    const shouldSplitRows = localRowsPerFile && localRowsPerFile > 0
+
+    if (shouldCutColumns) {
+      // タテ（カラム削除）を実行
       columnCutterRef.current?.applyCuts()
-    } else if (activeTab === 'split') {
-      // ヨコ（行分割）の場合
+      // ヨコの処理も必要なら、タテの完了を待つ
+      if (shouldSplitRows) {
+        setPendingRowSplit(true)
+      }
+    } else if (shouldSplitRows) {
+      // タテの処理が不要な場合は、すぐにヨコの処理を実行
       rowSplitterRef.current?.applySplit()
     }
   }
 
   const getSaidanButtonDisabled = () => {
-    if (activeTab === 'column') {
-      return selectedCutLines.size === 0
-    } else if (activeTab === 'split') {
-      return !localRowsPerFile || localRowsPerFile <= 0
-    }
-    return true
+    // タテもヨコも実行できない場合は無効
+    return selectedCutLines.size === 0 && (!localRowsPerFile || localRowsPerFile <= 0)
   }
 
   return (
@@ -137,101 +157,95 @@ function App() {
         {!originalData ? (
           <CsvUploader onCsvLoaded={handleCsvLoaded} />
         ) : (
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                ファイル: {originalData.headers.length} カラム, {originalData.rows.length} 行
-              </p>
+          <div className="flex flex-col gap-6">
+            {/* 左側: プレビューテーブル */}
+            <div className="space-y-4 flex-1">
+              {currentData && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <ColumnCutter
+                      ref={columnCutterRef}
+                      headers={currentData.headers}
+                      rows={currentData.rows}
+                      onCutColumns={cutColumns}
+                      onSelectionChange={setSelectedCutLines}
+                      initialSelectedCutLines={selectedCutLines}
+                    />
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="mx-auto h-14 rounded-full p-1">
-                <TabsTrigger value="column" className="rounded-full px-8 py-3 text-base">タテ</TabsTrigger>
-                <TabsTrigger value="split" className="rounded-full px-8 py-3 text-base">ヨコ</TabsTrigger>
-              </TabsList>
-              <TabsContent value="column" className="mt-4">
-                {currentData && (
-                  <ColumnCutter
-                    ref={columnCutterRef}
-                    headers={currentData.headers}
-                    rows={currentData.rows}
-                    onCutColumns={cutColumns}
-                    onSelectionChange={setSelectedCutLines}
-                    initialSelectedCutLines={selectedCutLines}
-                  />
-                )}
-              </TabsContent>
-              <TabsContent value="split" className="mt-4">
-                {currentData && (
-                  <RowSplitter
-                    ref={rowSplitterRef}
-                    headers={currentData.headers}
-                    rows={currentData.rows}
-                    rowsPerFile={rowsPerFile}
-                    splitData={rowSplitData}
-                    onSplitRows={splitRows}
-                    onRowsPerFileChange={setLocalRowsPerFile}
-                  />
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-        )}
+            {/* 右側: コントロールパネル */}
+            <div className="space-y-4">
+              {/* ヨコセクション */}
+              <Card>
+                <CardContent>
+                  {currentData && (
+                    <RowSplitter
+                      ref={rowSplitterRef}
+                      rowsPerFile={rowsPerFile}
+                      onSplitRows={splitRows}
+                      onRowsPerFileChange={setLocalRowsPerFile}
+                    />
+                  )}
+                  {originalData && !columnCutData && !rowSplitData && (
+                    <Button
+                      onClick={handleSaidan}
+                      disabled={getSaidanButtonDisabled()}
+                      variant="default"
+                      size="lg"
+                      className="w-full rounded-full mt-4"
+                    >
+                      <Scissors className="mr-2 h-5 w-5" />
+                      サイダン！
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
 
-        {/* フローティングボタン */}
-        {(columnCutData || rowSplitData) && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-            <div className="flex flex-row gap-3 p-4 rounded-full backdrop-blur-md bg-background/80 border border-border/50 shadow-lg">
-              <Button
-                onClick={handleReset}
-                variant="outline"
-                size="lg"
-                className="rounded-full transition-shadow bg-background/50"
-              >
-                <Upload className="mr-2 h-5 w-5" />
-                別のファイルを編集
-              </Button>
-              <Button
-                onClick={handleRevert}
-                variant="outline"
-                size="lg"
-                className="rounded-full transition-shadow bg-background/50"
-              >
-                <RotateCcw className="mr-2 h-5 w-5" />
-                もとに戻す
-              </Button>
-              <Button
-                onClick={handleDownload}
-                variant="default"
-                size="lg"
-                className="rounded-full transition-shadow"
-              >
-                <Download className="mr-2 h-5 w-5" />
-                {rowSplitData && rowSplitData.length > 0
-                  ? `${rowSplitData.length}個のファイルをダウンロード`
-                  : 'ダウンロード'}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* サイダンボタン（サイダン実行前のみ表示） */}
-        {originalData && !columnCutData && !rowSplitData && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-            <div className="flex flex-row gap-3 p-4 rounded-full backdrop-blur-md bg-background/80 border border-border/50 shadow-lg">
-              <Button
-                onClick={handleSaidan}
-                disabled={getSaidanButtonDisabled()}
-                variant="default"
-                size="lg"
-                className="rounded-full transition-shadow"
-              >
-                <Scissors className="mr-2 h-5 w-5" />
-                サイダン！
-              </Button>
+              {/* アクションボタン */}
+              {(columnCutData || rowSplitData) && (
+                <Card>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <Button
+                        onClick={handleDownload}
+                        variant="default"
+                        size="lg"
+                        className="w-full rounded-full"
+                      >
+                        <Download className="mr-2 h-5 w-5" />
+                        {rowSplitData && rowSplitData.length > 0
+                          ? `${rowSplitData.length}個のファイルをダウンロード`
+                          : 'ダウンロード'}
+                      </Button>
+                      <Button
+                        onClick={handleRevert}
+                        variant="outline"
+                        size="lg"
+                        className="w-full rounded-full"
+                      >
+                        <RotateCcw className="mr-2 h-5 w-5" />
+                        もとに戻す
+                      </Button>
+                      <Button
+                        onClick={handleReset}
+                        variant="outline"
+                        size="lg"
+                        className="w-full rounded-full"
+                      >
+                        <Upload className="mr-2 h-5 w-5" />
+                        別のファイルを編集
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         )}
+
       </div>
     </div>
   )

@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { Scissors } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -169,149 +168,141 @@ export const ColumnCutter = forwardRef<ColumnCutterHandle, ColumnCutterProps>(
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardContent className="relative">
-          <div className="relative mb-20" ref={tableRef}>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {headers.map((header, index) => (
-                      <TableHead
-                        key={index}
-                        ref={(el) => {
-                          if (el) {
-                            headerRefs.current.set(index, el)
-                          }
+      <div className="relative" ref={tableRef}>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {headers.map((header, index) => (
+                  <TableHead
+                    key={index}
+                    ref={(el) => {
+                      if (el) {
+                        headerRefs.current.set(index, el)
+                      }
+                    }}
+                    className="relative"
+                  >
+                    {columnsToRemove.has(index) && (
+                      <div
+                        className="absolute top-0 left-0 right-0 h-full bg-red-500/10 pointer-events-none"
+                      />
+                    )}
+                    {header}
+                    {index < headers.length - 1 && (
+                      <div
+                        className={`absolute top-0 right-0 h-full cursor-pointer transition-all z-10 border-r ${
+                          selectedCutLines.has(index)
+                            ? 'border-red-500 border-solid'
+                            : hoveredLineIndex === index
+                            ? 'border-primary/70 border-dashed'
+                            : 'border-primary/30 border-dashed'
+                        }`}
+                        onMouseEnter={() => setHoveredLineIndex(index)}
+                        onMouseLeave={() => setHoveredLineIndex(null)}
+                        onClick={() => handleCutLineClick(index)}
+                        title="クリックして裁断"
+                        style={{
+                          right: '0',
+                          transform: 'translateX(-50%)',
+                          width: '20px',
+                          borderRightWidth: '2px',
                         }}
-                        className="relative"
-                      >
-                        {columnsToRemove.has(index) && (
-                          <div
-                            className="absolute top-0 left-0 right-0 h-full bg-red-500/10 pointer-events-none"
-                          />
-                        )}
-                        {header}
-                        {index < headers.length - 1 && (
-                          <div
-                            className={`absolute top-0 right-0 h-full cursor-pointer transition-all z-10 border-r ${
-                              selectedCutLines.has(index)
-                                ? 'border-red-500 border-solid'
-                                : hoveredLineIndex === index
-                                ? 'border-primary/70 border-dashed'
-                                : 'border-primary/30 border-dashed'
-                            }`}
-                            onMouseEnter={() => setHoveredLineIndex(index)}
-                            onMouseLeave={() => setHoveredLineIndex(null)}
-                            onClick={() => handleCutLineClick(index)}
-                            title="クリックして裁断"
-                            style={{
-                              right: '0',
-                              transform: 'translateX(-50%)',
-                              width: '20px',
-                              borderRightWidth: '2px',
-                            }}
-                          />
-                        )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayRows.map((row, rowIndex) => (
-                    <TableRow key={rowIndex}>
-                      {row.map((cell, cellIndex) => (
-                        <TableCell key={cellIndex} className="relative">
-                          {columnsToRemove.has(cellIndex) && (
-                            <div
-                              className="absolute top-0 left-0 right-0 h-full bg-red-500/10 pointer-events-none"
-                            />
-                          )}
-                          {cell}
-                          {cellIndex < headers.length - 1 && (
-                            <div
-                              className={`absolute top-0 right-0 h-full cursor-pointer transition-all z-10 border-r ${
-                                selectedCutLines.has(cellIndex)
-                                  ? 'border-red-500 border-solid'
-                                  : hoveredLineIndex === cellIndex
-                                  ? 'border-primary/70 border-dashed'
-                                  : 'border-primary/30 border-dashed'
-                              }`}
-                              onMouseEnter={() => setHoveredLineIndex(cellIndex)}
-                              onMouseLeave={() => setHoveredLineIndex(null)}
-                              onClick={() => handleCutLineClick(cellIndex)}
-                              title="クリックして裁断"
-                              style={{
-                                right: '0',
-                                transform: 'translateX(-50%)',
-                                width: '20px',
-                                borderRightWidth: '2px',
-                              }}
-                            />
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
+                      />
+                    )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {displayRows.map((row, rowIndex) => (
+                <TableRow key={rowIndex}>
+                  {row.map((cell, cellIndex) => (
+                    <TableCell key={cellIndex} className="relative">
+                      {columnsToRemove.has(cellIndex) && (
+                        <div
+                          className="absolute top-0 left-0 right-0 h-full bg-red-500/10 pointer-events-none"
+                        />
+                      )}
+                      {cell}
+                      {cellIndex < headers.length - 1 && (
+                        <div
+                          className={`absolute top-0 right-0 h-full cursor-pointer transition-all z-10 border-r ${
+                            selectedCutLines.has(cellIndex)
+                              ? 'border-red-500 border-solid'
+                              : hoveredLineIndex === cellIndex
+                              ? 'border-primary/70 border-dashed'
+                              : 'border-primary/30 border-dashed'
+                          }`}
+                          onMouseEnter={() => setHoveredLineIndex(cellIndex)}
+                          onMouseLeave={() => setHoveredLineIndex(null)}
+                          onClick={() => handleCutLineClick(cellIndex)}
+                          title="クリックして裁断"
+                          style={{
+                            right: '0',
+                            transform: 'translateX(-50%)',
+                            width: '20px',
+                            borderRightWidth: '2px',
+                          }}
+                        />
+                      )}
+                    </TableCell>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
-            {/* ハサミアイコンの表示（すべての切り取り線の中央に） */}
-            {Array.from({ length: headers.length - 1 }, (_, index) => index).map((lineIndex) => {
-              const position = columnPositions.get(lineIndex)
-              if (!position) return null
-              const isSelected = selectedCutLines.has(lineIndex)
-              const isAnimating = animatingLines.has(lineIndex)
-              // 切り取り線の中心はカラムの右端から10px左（width: 20pxの半分）に配置されている
-              const lineCenterPosition = position - 10
-              return (
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        {/* ハサミアイコンの表示（すべての切り取り線の中央に） */}
+        {Array.from({ length: headers.length - 1 }, (_, index) => index).map((lineIndex) => {
+          const position = columnPositions.get(lineIndex)
+          if (!position) return null
+          const isSelected = selectedCutLines.has(lineIndex)
+          const isAnimating = animatingLines.has(lineIndex)
+          // 切り取り線の中心はカラムの右端から10px左（width: 20pxの半分）に配置されている
+          const lineCenterPosition = position - 10
+          return (
+            <div
+              key={lineIndex}
+              className="absolute top-0 z-20"
+              style={{
+                left: `${lineCenterPosition}px`,
+                transform: 'translateX(-50%)',
+                height: '100%',
+              }}
+            >
+              {isAnimating && (
                 <div
-                  key={lineIndex}
-                  className="absolute top-0 z-20"
+                  className="absolute top-0 left-1/2 -translate-x-1/2 cursor-pointer"
                   style={{
-                    left: `${lineCenterPosition}px`,
-                    transform: 'translateX(-50%)',
-                    height: '100%',
+                    animation: 'scissorsSlide 1s ease-in-out',
                   }}
+                  onClick={() => handleCutLineClick(lineIndex)}
                 >
-                  {isAnimating && (
-                    <div
-                      className="absolute top-0 left-1/2 -translate-x-1/2 cursor-pointer"
-                      style={{
-                        animation: 'scissorsSlide 1s ease-in-out',
-                      }}
-                      onClick={() => handleCutLineClick(lineIndex)}
-                    >
-                      <div className="bg-background rounded-full p-1">
-                        <Scissors className="h-5 w-5 text-red-500" />
-                      </div>
-                    </div>
-                  )}
-                  {!isAnimating && (
-                    <div 
-                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
-                      onClick={() => handleCutLineClick(lineIndex)}
-                    >
-                      <div className="bg-background rounded-full p-1">
-                        <Scissors className={`h-5 w-5 ${isSelected ? 'text-red-500' : 'text-primary/40'}`} />
-                      </div>
-                    </div>
-                  )}
+                  <div className="bg-background rounded-full p-1">
+                    <Scissors className="h-5 w-5 text-red-500" />
+                  </div>
                 </div>
-              )
-            })}
-          </div>
-
-          <div className="absolute left-6 right-6 bottom-6 flex items-center justify-between">
-            {rows.length > maxRows && (
-              <p className="text-sm text-muted-foreground whitespace-nowrap">
-                プレビュー: 最初の{maxRows}行を表示（他 {rows.length - maxRows} 行が非表示）
-              </p>
-            )}
-          </div>
-
-        </CardContent>
-      </Card>
+              )}
+              {!isAnimating && (
+                <div 
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
+                  onClick={() => handleCutLineClick(lineIndex)}
+                >
+                  <div className="bg-background rounded-full p-1">
+                    <Scissors className={`h-5 w-5 ${isSelected ? 'text-red-500' : 'text-primary/40'}`} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      {rows.length > maxRows && (
+        <p className="text-sm text-muted-foreground">
+          プレビュー: 最初の{maxRows}行を表示（他 {rows.length - maxRows} 行が非表示）
+        </p>
+      )}
     </div>
   )
 })
