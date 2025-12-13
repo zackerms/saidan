@@ -50,7 +50,7 @@ src/
    - `useCsvProcessor` フックでPapaParseを使用してパース
    - パース結果を `App.tsx` の状態に保存
 
-2. **カラム削除（裁断）**
+2. **カラム削除**
    - `ColumnCutter` コンポーネントでカラム間の線を選択
    - 選択された線より右側のカラムを削除
    - 処理結果を `App.tsx` の `processedData` に保存
