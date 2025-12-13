@@ -102,8 +102,24 @@ export function useTheme() {
     setTheme(newTheme);
   };
 
+  // テーマを切り替える関数（light → dark → system → light）
+  const toggleTheme = () => {
+    if (theme === 'light') {
+      setTheme('dark');
+    } else if (theme === 'dark') {
+      setTheme('system');
+    } else {
+      setTheme('light');
+    }
+  };
+
   // 現在の有効なテーマ（light/dark）を取得
   const effectiveTheme = getEffectiveTheme(theme);
 
-  return { theme, setTheme: setThemeValue, effectiveTheme };
+  return {
+    theme,
+    setTheme: setThemeValue,
+    toggleTheme,
+    effectiveTheme,
+  };
 }

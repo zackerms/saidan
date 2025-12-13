@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,11 +10,11 @@ import { useCutter, type ProcessedData } from '@/hooks/useCutter';
 import {
   Download,
   Upload,
+  Scissors,
+  RotateCcw,
   Sun,
   Moon,
   Monitor,
-  Scissors,
-  RotateCcw,
 } from 'lucide-react';
 
 function App() {
@@ -29,7 +29,7 @@ function App() {
     null
   );
   const { downloadCsv, downloadMultiple } = useDownload();
-  const { theme, setTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const {
     originalData,
     setData,
@@ -38,17 +38,8 @@ function App() {
     revert,
   } = useCutter();
 
-  const handleThemeToggle = () => {
-    if (theme === 'light') {
-      setTheme('dark');
-    } else if (theme === 'dark') {
-      setTheme('system');
-    } else {
-      setTheme('light');
-    }
-  };
-
-  const getThemeIcon = () => {
+  // 現在のテーマに応じたアイコンを取得
+  const themeIcon = useMemo(() => {
     if (theme === 'light') {
       return <Sun className="h-5 w-5" />;
     } else if (theme === 'dark') {
@@ -56,7 +47,7 @@ function App() {
     } else {
       return <Monitor className="h-5 w-5" />;
     }
-  };
+  }, [theme]);
 
   const handleCsvLoaded = (data: { rows: string[][] }, filename: string) => {
     setData(data);
@@ -150,10 +141,10 @@ function App() {
               variant="outline"
               size="icon"
               className="rounded-full"
-              onClick={handleThemeToggle}
+              onClick={toggleTheme}
               title={`テーマ: ${theme === 'light' ? 'ライト' : theme === 'dark' ? 'ダーク' : 'システム'}`}
             >
-              {getThemeIcon()}
+              {themeIcon}
               <span className="sr-only">テーマ切替</span>
             </Button>
           </div>
