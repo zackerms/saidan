@@ -12,9 +12,9 @@ import { Download, Upload, Sun, Moon, Monitor, Scissors, RotateCcw } from 'lucid
 
 function App() {
   const [originalFilename, setOriginalFilename] = useState<string | null>(null)
-  const [selectedColumnCutLines, setSelectedColumnCutLines] = useState<Set<number>>(new Set())
   const [localRowCutCount, setLocalRowCutCount] = useState<number>(0)
   const [isRowCutSelected, setIsRowCutSelected] = useState<boolean>(false)
+  const [numberOfColumnsToCut, setNumberOfColumnsToCut] = useState<number|null>(null)
   const [localRowsPerFile, setLocalRowsPerFile] = useState<number>(100)
   const { downloadCsv, downloadMultiple } = useDownload()
   const { theme, setTheme } = useTheme()
@@ -60,7 +60,7 @@ function App() {
     setRowsPerFile(initialRowsPerFile)
     setLocalRowsPerFile(initialRowsPerFile)
     setLocalRowCutCount(0)
-    setSelectedColumnCutLines(new Set())
+    setNumberOfColumnsToCut(null)
   }
 
   const handleDownload = () => {
@@ -94,26 +94,14 @@ function App() {
     resetCutter()
     setOriginalFilename(null)
     setLocalRowCutCount(0)
-    setSelectedColumnCutLines(new Set())
+    setNumberOfColumnsToCut(null)
   }
 
   const handleRevert = () => {
     revert()
-    setSelectedColumnCutLines(new Set())
+    setNumberOfColumnsToCut(null)
     setLocalRowCutCount(0)
     setIsRowCutSelected(false)
-  }
-
-  const handleColumnCutLineClick = (index: number) => {
-    setSelectedColumnCutLines(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(index)) {
-        newSet.delete(index)
-      } else {
-        newSet.add(index)
-      }
-      return newSet
-    })
   }
 
   const handleRowCutLineClick = () => {
@@ -123,7 +111,7 @@ function App() {
 
   const handleSaidan = () => {
     const shouldCutRows = localRowCutCount > 0
-    const shouldCutColumns = selectedColumnCutLines.size > 0
+    const shouldCutColumns = numberOfColumnsToCut !== null && numberOfColumnsToCut > 0
     const shouldSplitRows = localRowsPerFile && localRowsPerFile > 0
 
     // 行カットを実行
@@ -133,7 +121,7 @@ function App() {
 
     // カラムカットを実行
     if (shouldCutColumns) {
-      cutColumns(selectedColumnCutLines)
+      cutColumns(new Set([numberOfColumnsToCut]))
     }
 
     // 行分割を実行
@@ -144,7 +132,7 @@ function App() {
 
   const getSaidanButtonDisabled = () => {
     // すべての処理が実行できない場合は無効
-    return localRowCutCount === 0 && selectedColumnCutLines.size === 0 && (!localRowsPerFile || localRowsPerFile <= 0)
+    return localRowCutCount === 0 && numberOfColumnsToCut === 0 && (!localRowsPerFile || localRowsPerFile <= 0)
   }
 
   return (
@@ -174,19 +162,16 @@ function App() {
           <CsvUploader onCsvLoaded={handleCsvLoaded} />
         ) : (
           <div className="flex flex-col gap-6">
-            {/* プレビューテーブル */}
             <div className="space-y-4 flex-1">
               {originalData && (
                 <Card>
-                  <CardContent className="pt-6">
+                  <CardContent>
                     <SplitterPreview
                       rows={originalData.rows}
-                      selectedColumnCutLines={selectedColumnCutLines}
-                      rowCutCount={localRowCutCount}
+                      numberOfColumnsToCut={numberOfColumnsToCut}
+                      numberOfRowsToCut={localRowCutCount}
                       isRowCutSelected={isRowCutSelected}
-                      appliedColumnCutLines={columnCutData ? selectedColumnCutLines : undefined}
-                      appliedRowCutCount={rowCutData ? localRowCutCount : undefined}
-                      onColumnCutLineClick={handleColumnCutLineClick}
+                      onColumnCutLineClick={(index) => setNumberOfColumnsToCut(index + 1)}
                       onRowCutLineClick={handleRowCutLineClick}
                     />
                   </CardContent>
@@ -237,16 +222,27 @@ function App() {
                         placeholder="100"
                       />
                     </div>
-                    <Button
-                      onClick={handleSaidan}
-                      disabled={getSaidanButtonDisabled()}
-                      variant="default"
-                      size="lg"
-                      className="w-full rounded-full"
-                    >
-                      <Scissors className="mr-2 h-5 w-5" />
-                      サイダン！
-                    </Button>
+                    <div className="flex flex-row gap-2 w-full">
+                      <Button
+                        onClick={handleRevert}
+                        variant="outline"
+                        size="lg"
+                        className="flex-1 rounded-full"
+                      >
+                        <RotateCcw className="mr-2 h-5 w-5" />
+                        もとに戻す
+                      </Button>
+                      <Button
+                        onClick={handleSaidan}
+                        disabled={getSaidanButtonDisabled()}
+                        variant="default"
+                        size="lg"
+                        className="flex-1 rounded-full"
+                      >
+                        <Scissors className="mr-2 h-5 w-5" />
+                        サイダン！
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -267,15 +263,6 @@ function App() {
                       {rowSplitData && rowSplitData.length > 0
                         ? `${rowSplitData.length}個のファイルをダウンロード`
                         : 'ダウンロード'}
-                    </Button>
-                    <Button
-                      onClick={handleRevert}
-                      variant="outline"
-                      size="lg"
-                      className="w-full rounded-full"
-                    >
-                      <RotateCcw className="mr-2 h-5 w-5" />
-                      もとに戻す
                     </Button>
                     <Button
                       onClick={handleReset}
