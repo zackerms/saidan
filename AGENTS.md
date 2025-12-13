@@ -147,4 +147,3 @@ pnpm dlx shadcn@latest add <component-name>
 - [PapaParse](https://www.papaparse.com/)
 - [Vite](https://vitejs.dev/)
 - [React](https://react.dev/)
-

@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react';
 
-export type Theme = 'light' | 'dark' | 'system'
+export type Theme = 'light' | 'dark' | 'system';
 
-const STORAGE_KEY = 'saidan-theme'
-const DEFAULT_VALUE: Theme = 'system'
+const STORAGE_KEY = 'saidan-theme';
+const DEFAULT_VALUE: Theme = 'system';
 
 /**
  * localStorageからテーマ設定を読み込む関数
@@ -11,16 +11,16 @@ const DEFAULT_VALUE: Theme = 'system'
  */
 function loadFromStorage(): Theme {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
-      return stored
+      return stored;
     }
     // 初回アクセス時はデフォルト値（system）をlocalStorageに保存
-    localStorage.setItem(STORAGE_KEY, DEFAULT_VALUE)
-    return DEFAULT_VALUE
+    localStorage.setItem(STORAGE_KEY, DEFAULT_VALUE);
+    return DEFAULT_VALUE;
   } catch (error) {
-    console.warn('localStorageからのテーマ設定読み込みに失敗しました:', error)
-    return DEFAULT_VALUE
+    console.warn('localStorageからのテーマ設定読み込みに失敗しました:', error);
+    return DEFAULT_VALUE;
   }
 }
 
@@ -28,8 +28,10 @@ function loadFromStorage(): Theme {
  * システムのカラースキームを取得
  */
 function getSystemTheme(): 'light' | 'dark' {
-  if (typeof window === 'undefined') return 'light'
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  if (typeof window === 'undefined') return 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
 }
 
 /**
@@ -37,20 +39,20 @@ function getSystemTheme(): 'light' | 'dark' {
  */
 function getEffectiveTheme(theme: Theme): 'light' | 'dark' {
   if (theme === 'system') {
-    return getSystemTheme()
+    return getSystemTheme();
   }
-  return theme
+  return theme;
 }
 
 /**
  * DOMにテーマを適用
  */
 function applyTheme(theme: 'light' | 'dark') {
-  const root = document.documentElement
+  const root = document.documentElement;
   if (theme === 'dark') {
-    root.classList.add('dark')
+    root.classList.add('dark');
   } else {
-    root.classList.remove('dark')
+    root.classList.remove('dark');
   }
 }
 
@@ -61,48 +63,47 @@ function applyTheme(theme: 'light' | 'dark') {
  */
 export function useTheme() {
   // lazy initializationを使用してlocalStorageから初期値を読み込む
-  const [theme, setTheme] = useState<Theme>(() => loadFromStorage())
+  const [theme, setTheme] = useState<Theme>(() => loadFromStorage());
 
   // テーマが変更されたらlocalStorageに保存し、DOMに適用
   useEffect(() => {
-    const effectiveTheme = getEffectiveTheme(theme)
-    applyTheme(effectiveTheme)
+    const effectiveTheme = getEffectiveTheme(theme);
+    applyTheme(effectiveTheme);
 
     try {
-      localStorage.setItem(STORAGE_KEY, theme)
+      localStorage.setItem(STORAGE_KEY, theme);
     } catch (error) {
-      console.warn('localStorageへのテーマ設定保存に失敗しました:', error)
+      console.warn('localStorageへのテーマ設定保存に失敗しました:', error);
     }
-  }, [theme])
+  }, [theme]);
 
   // システム設定モードの場合、システム設定の変更を監視
   useEffect(() => {
-    if (theme !== 'system') return
+    if (theme !== 'system') return;
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = () => {
-      const systemTheme = getSystemTheme()
-      applyTheme(systemTheme)
-    }
+      const systemTheme = getSystemTheme();
+      applyTheme(systemTheme);
+    };
 
     // 古いブラウザ対応のため、addEventListenerとaddListenerの両方を試す
     if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleChange)
-      return () => mediaQuery.removeEventListener('change', handleChange)
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
     } else if (mediaQuery.addListener) {
-      mediaQuery.addListener(handleChange)
-      return () => mediaQuery.removeListener(handleChange)
+      mediaQuery.addListener(handleChange);
+      return () => mediaQuery.removeListener(handleChange);
     }
-  }, [theme])
+  }, [theme]);
 
   // テーマを設定する関数
   const setThemeValue = (newTheme: Theme) => {
-    setTheme(newTheme)
-  }
+    setTheme(newTheme);
+  };
 
   // 現在の有効なテーマ（light/dark）を取得
-  const effectiveTheme = getEffectiveTheme(theme)
+  const effectiveTheme = getEffectiveTheme(theme);
 
-  return { theme, setTheme: setThemeValue, effectiveTheme }
+  return { theme, setTheme: setThemeValue, effectiveTheme };
 }
-

@@ -1,59 +1,68 @@
-import { useRef, useCallback, useEffect, useState } from 'react'
-import { Upload } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { useCsvProcessor } from '@/hooks/useCsvProcessor'
+import { useRef, useCallback, useEffect, useState } from 'react';
+import { Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { useCsvProcessor } from '@/hooks/useCsvProcessor';
 
 interface CsvUploaderProps {
-  onCsvLoaded: (data: { rows: string[][] }, filename: string) => void
+  onCsvLoaded: (data: { rows: string[][] }, filename: string) => void;
 }
 
 export function CsvUploader({ onCsvLoaded }: CsvUploaderProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const { csvData, parseCsv, error, isProcessing } = useCsvProcessor()
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { csvData, parseCsv, error, isProcessing } = useCsvProcessor();
 
-  const [originalFilename, setOriginalFilename] = useState<string | null>(null)
+  const [originalFilename, setOriginalFilename] = useState<string | null>(null);
 
   useEffect(() => {
     if (csvData && !error && originalFilename) {
-      onCsvLoaded(csvData, originalFilename)
+      onCsvLoaded(csvData, originalFilename);
     }
-  }, [csvData, error, originalFilename, onCsvLoaded])
+  }, [csvData, error, originalFilename, onCsvLoaded]);
 
-  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleFileSelect = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
 
-    if (!file.name.endsWith('.csv')) {
-      alert('CSVファイルを選択してください')
-      return
-    }
+      if (!file.name.endsWith('.csv')) {
+        alert('CSVファイルを選択してください');
+        return;
+      }
 
-    setOriginalFilename(file.name)
-    parseCsv(file)
-  }, [parseCsv])
+      setOriginalFilename(file.name);
+      parseCsv(file);
+    },
+    [parseCsv]
+  );
 
-  const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    const file = event.dataTransfer.files[0]
-    if (!file) return
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const file = event.dataTransfer.files[0];
+      if (!file) return;
 
-    if (!file.name.endsWith('.csv')) {
-      alert('CSVファイルを選択してください')
-      return
-    }
+      if (!file.name.endsWith('.csv')) {
+        alert('CSVファイルを選択してください');
+        return;
+      }
 
-    setOriginalFilename(file.name)
-    parseCsv(file)
-  }, [parseCsv])
+      setOriginalFilename(file.name);
+      parseCsv(file);
+    },
+    [parseCsv]
+  );
 
-  const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-  }, [])
+  const handleDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+    },
+    []
+  );
 
   const handleButtonClick = useCallback(() => {
-    fileInputRef.current?.click()
-  }, [])
+    fileInputRef.current?.click();
+  }, []);
 
   return (
     <Card>
@@ -78,12 +87,9 @@ export function CsvUploader({ onCsvLoaded }: CsvUploaderProps) {
             onChange={handleFileSelect}
             className="hidden"
           />
-          {error && (
-            <p className="mt-4 text-sm text-red-500">{error}</p>
-          )}
+          {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
-
