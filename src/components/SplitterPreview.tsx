@@ -1,7 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Scissors } from 'lucide-react'
-import { useSound } from '@/hooks/useSound'
-import { useSoundSetting } from '@/hooks/useSoundSetting'
 
 interface SplitterPreviewProps {
   rows: string[][]
@@ -35,9 +33,6 @@ export function SplitterPreview({
   }, [rows])
 
   const [columnWidths, setColumnWidths] = useState<number[]>(new Array(columnCount).fill(0));
-
-  const { playSound } = useSound()
-  const { isEnabled: isSoundEnabled } = useSoundSetting();
 
   const columnPositions = useMemo(() => {
     return columnWidths.map((width, index) => {
@@ -98,10 +93,7 @@ export function SplitterPreview({
 
       return newSet
     })
-    if (isSoundEnabled) {
-      playSound('/sounds/paper-cut.mp3')
-    }
-  }, [onColumnCutLineClick, isSoundEnabled, playSound, numberOfColumnsToCut])
+  }, [onColumnCutLineClick])
 
   const handleRowCutLineClick = useCallback(() => {
     // 解除時はアニメーションと音を再生しない
@@ -116,10 +108,7 @@ export function SplitterPreview({
     setTimeout(() => {
       setAnimatingRowLine(false)
     }, 1000)
-    if (isSoundEnabled) {
-      playSound('/sounds/paper-cut.mp3')
-    }
-  }, [onRowCutLineClick, isSoundEnabled, playSound, isRowCutSelected])
+  }, [onRowCutLineClick, isRowCutSelected])
 
 
   return (

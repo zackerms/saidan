@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { CsvUploader } from '@/components/CsvUploader'
 import { SplitterPreview } from '@/components/SplitterPreview'
-import { SettingsDialog } from '@/components/SettingsDialog'
 import { useDownload } from '@/hooks/useDownload'
 import { useTheme } from '@/hooks/useTheme'
 import { useCutter } from '@/hooks/useCutter'
@@ -154,7 +153,6 @@ function App() {
               {getThemeIcon()}
               <span className="sr-only">テーマ切替</span>
             </Button>
-            <SettingsDialog />
           </div>
         </div>
 
