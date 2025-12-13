@@ -7,6 +7,10 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       style={{
+        borderStyle: 'solid',
+        borderColor: 'rgba(0, 0, 0, 0.1)',
+        borderTopWidth: 1,
+        borderLeftWidth: 1,
         boxShadow: '10px 10px 0px 0px rgba(0, 0, 0, 0.1)',
       }}
       className={cn(
