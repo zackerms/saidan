@@ -363,13 +363,19 @@ const Cell = ({
   );
 
   const isCutOnRightBorder = useMemo(
-    () => columnIndexToCut !== null && columnIndexToCut - 1 <= columnIndex,
+    () => columnIndexToCut !== null && columnIndexToCut - 1 === columnIndex,
     [columnIndexToCut, columnIndex]
   );
 
   const isInCutColumnRange = useMemo(
     () => columnIndexToCut !== null && columnIndexToCut <= columnIndex,
     [columnIndexToCut, columnIndex]
+  );
+
+  const isHovered = useMemo(
+    () =>
+      hoveredColumnLineIndex !== null && hoveredColumnLineIndex === columnIndex,
+    [hoveredColumnLineIndex, columnIndex]
   );
 
   const onMouseEnter = useCallback(() => {
@@ -422,42 +428,51 @@ const Cell = ({
       ref={cellRef}
     >
       <div
-        className={`absolute bottom-0 left-0 right-0 cursor-pointer transition-all z-10 border-b ${
+        className={`absolute bottom-0 left-0 right-0 cursor-pointer transition-all z-10 border-b-2 ${
           isRowCut && isCutOnBottomBorder
             ? 'border-red-500 border-solid'
             : 'border-primary/30 border-dashed'
         }`}
-        onClick={handleOnRowCutLineClick}
-        style={{
-          bottom: '0',
-          height: '20px',
-          borderBottomWidth: '2px',
-        }}
       />
+      {columnIndex < columnCount - 1 && (
+        <div
+          className={`absolute top-0 right-0 h-full cursor-pointer transition-all z-10 border-r-2 ${
+            isCutOnRightBorder
+              ? 'border-red-500 border-solid'
+              : isHovered
+                ? 'border-primary/70 border-dashed'
+                : 'border-primary/30 border-dashed'
+          }`}
+        />
+      )}
       {isInCutColumnRange && (
         <div className="absolute top-0 left-0 right-0 h-full bg-red-500/10 pointer-events-none" />
       )}
       {cell}
-      {/* ボーダー */}
+      {/* 右ボーダー あたり判定 */}
       {columnIndex < columnCount - 1 && (
         <div
-          className={`absolute top-0 right-0 h-full cursor-pointer transition-all z-10 border-r ${
-            isCutOnRightBorder
-              ? 'border-red-500 border-solid'
-              : hoveredColumnLineIndex === columnIndex
-                ? 'border-primary/70 border-dashed'
-                : 'border-primary/30 border-dashed'
-          }`}
+          className={`absolute top-0 right-0 h-full cursor-pointer z-10`}
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
           onClick={onClick}
           style={{
-            right: '0',
-            width: '20px',
-            borderRightWidth: '2px',
+            right: 0,
+            width: 10,
+            transform: 'translateX(50%)',
           }}
         />
       )}
+      {/* 下ボーダー あたり判定 */}
+      <div
+        className={`absolute bottom-0 left-0 right-0 cursor-pointer z-10`}
+        onClick={handleOnRowCutLineClick}
+        style={{
+          bottom: 0,
+          height: 10,
+          transform: 'translateY(50%)',
+        }}
+      />
     </td>
   );
 };
