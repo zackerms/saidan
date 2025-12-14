@@ -172,7 +172,7 @@ export function SplitterPreview({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        <div className="overflow-x-auto">
+        <div> 
           <table className="w-full" ref={tableRef}>
             <tbody>
               {displayRows.map((row, rowIndexInTable) => {
