@@ -52,6 +52,16 @@ function App() {
     }
   }, [theme]);
 
+  const handleOnRowIndexToDisplayChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!originalData) return;
+      const value = Number.parseInt(e.target.value) || 0;
+      const newValue = Math.max(0, Math.min(value, originalData.rows.length));
+      setRowIndexToDisplay(newValue);
+    },
+    [originalData]
+  );
+
   const handleCsvLoaded = (data: { rows: string[][] }, filename: string) => {
     setData(data);
     setOriginalFilename(filename);
@@ -166,22 +176,35 @@ function App() {
         ) : (
           <div className="flex flex-col gap-6">
             <div className="space-y-4 flex-1">
-              {originalData && (
-                <Card>
-                  <CardContent>
-                    <SplitterPreview
-                      rows={originalData.rows}
-                      columnIndexToCut={numberOfColumnsToCut}
-                      rowIndexToDisplay={rowIndexToDisplay}
-                      rowIndexToCut={rowIndexToCut}
-                      onColumnCutLineClick={(index) =>
-                        setNumberOfColumnsToCut(index + 1)
-                      }
-                      onRowCutLineClick={handleRowCutLineClick}
+              <Card>
+                <CardContent className="space-y-4">
+                  <SplitterPreview
+                    rows={originalData.rows}
+                    columnIndexToCut={numberOfColumnsToCut}
+                    rowIndexToDisplay={rowIndexToDisplay}
+                    rowIndexToCut={rowIndexToCut}
+                    onColumnCutLineClick={(index) =>
+                      setNumberOfColumnsToCut(index + 1)
+                    }
+                    onRowCutLineClick={handleRowCutLineClick}
+                  />
+                  <div
+                    className="flex flex-row gap-2 justify-self-end items-center w-[200px]"
+                  >
+                    <Input
+                      id="rowCutCount"
+                      type="number"
+                      min="0"
+                      max={originalData.rows.length}
+                      value={rowIndexToDisplay}
+                      onChange={handleOnRowIndexToDisplayChange}
+                      placeholder="0"
+                      className="flex-1 text-right"
                     />
-                  </CardContent>
-                </Card>
-              )}
+                    <label htmlFor="rowCutCount">行目から表示</label>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             {/* フォーム（画面下部） */}
@@ -189,30 +212,6 @@ function App() {
               <Card>
                 <CardContent className="pt-6">
                   <div className="space-y-4">
-                    <div>
-                      <label
-                        htmlFor="rowCutCount"
-                        className="block text-sm font-medium mb-2"
-                      >
-                        行目から表示
-                      </label>
-                      <Input
-                        id="rowCutCount"
-                        type="number"
-                        min="0"
-                        max={originalData.rows.length}
-                        value={rowIndexToDisplay}
-                        onChange={(e) => {
-                          const value = Number.parseInt(e.target.value) || 0;
-                          const newValue = Math.max(
-                            0,
-                            Math.min(value, originalData.rows.length)
-                          );
-                          setRowIndexToDisplay(newValue);
-                        }}
-                        placeholder="0"
-                      />
-                    </div>
                     <div>
                       <label
                         htmlFor="rowsPerFile"
