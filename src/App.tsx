@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { CsvUploader } from '@/components/CsvUploader';
 import {
   SplitterPreview,
@@ -9,16 +10,8 @@ import {
 } from '@/components/SplitterPreview';
 import { useDownload } from '@/hooks/useDownload';
 import { useTheme } from '@/hooks/useTheme';
-import { useCutter, type ProcessedData } from '@/hooks/useCutter';
-import {
-  Download,
-  Upload,
-  Scissors,
-  RotateCcw,
-  Sun,
-  Moon,
-  Monitor,
-} from 'lucide-react';
+import { useCutter } from '@/hooks/useCutter';
+import { Download, Upload, Sun, Moon, Monitor } from 'lucide-react';
 
 function App() {
   const [originalFilename, setOriginalFilename] = useState<string | null>(null);
@@ -27,17 +20,14 @@ function App() {
   const [numberOfColumnsToCut, setNumberOfColumnsToCut] = useState<
     number | null
   >(null);
-  const [localRowsPerFile, setLocalRowsPerFile] = useState<number>(100);
-  const [processedData, setProcessedData] = useState<ProcessedData | null>(
-    null
-  );
+  const [localRowsPerFile, setLocalRowsPerFile] = useState<number | null>(null);
+  const [includeHeader, setIncludeHeader] = useState<boolean>(false);
   const { downloadCsv, downloadMultiple } = useDownload();
   const {
     originalData,
     setData,
     processData,
     reset: resetCutter,
-    revert,
   } = useCutter();
 
   const handleOnRowIndexToDisplayChange = useCallback(
@@ -53,29 +43,40 @@ function App() {
   const handleCsvLoaded = (data: { rows: string[][] }, filename: string) => {
     setData(data);
     setOriginalFilename(filename);
-    // 1ファイルあたりの行数の初期値を入力ファイルの行数に設定
-    const initialRowsPerFile = data.rows.length;
-    setLocalRowsPerFile(initialRowsPerFile);
     setNumberOfColumnsToCut(null);
-    setProcessedData(null);
   };
 
   const handleDownload = () => {
-    if (!processedData) {
-      // 処理が実行されていない場合は元のデータをダウンロード
-      if (originalData) {
-        const filename = originalFilename || 'data.csv';
-        downloadCsv(originalData.rows, filename);
-      }
+    if (!originalData) return;
+
+    // 処理が実行できない場合は元のデータをダウンロード
+    const canProcess =
+      rowIndexToCut !== null ||
+      numberOfColumnsToCut !== null ||
+      (localRowsPerFile !== null && localRowsPerFile > 0 && localRowsPerFile < originalData.rows.length);
+
+    if (!canProcess) {
+      const filename = originalFilename || 'data.csv';
+      downloadCsv(originalData.rows, filename);
       return;
     }
 
+    // 処理を実行
+    const result = processData(
+      rowIndexToCut ?? 0,
+      numberOfColumnsToCut,
+      localRowsPerFile !== null && localRowsPerFile > 0 ? localRowsPerFile : null,
+      includeHeader
+    );
+
+    if (!result) return;
+
     // 分割されたファイルをダウンロード
-    if (Array.isArray(processedData)) {
+    if (Array.isArray(result)) {
       const baseFilename = originalFilename
         ? originalFilename.replace(/\.csv$/i, '')
         : 'split';
-      const files = processedData.map((data, index) => ({
+      const files = result.map((data, index) => ({
         rows: data.rows,
         filename: `${baseFilename}_${index + 1}.csv`,
       }));
@@ -85,7 +86,7 @@ function App() {
       const filename = originalFilename
         ? originalFilename.replace(/\.csv$/i, '_processed.csv')
         : 'processed.csv';
-      downloadCsv(processedData.rows, filename);
+      downloadCsv(result.rows, filename);
     }
   };
 
@@ -95,15 +96,8 @@ function App() {
     setNumberOfColumnsToCut(null);
     setRowIndexToDisplay(0);
     setRowIndexToCut(null);
-    setProcessedData(null);
-  };
-
-  const handleRevert = () => {
-    revert();
-    setNumberOfColumnsToCut(null);
-    setRowIndexToCut(null);
-    setRowIndexToDisplay(0);
-    setProcessedData(null);
+    setLocalRowsPerFile(null);
+    setIncludeHeader(false);
   };
 
   const handleRowCutLineClick: RowCutLineClickHandler = useCallback(
@@ -118,24 +112,6 @@ function App() {
     },
     []
   );
-
-  const handleSaidan = () => {
-    const result = processData(
-      rowIndexToCut ?? 0,
-      numberOfColumnsToCut,
-      localRowsPerFile > 0 ? localRowsPerFile : null
-    );
-    setProcessedData(result);
-  };
-
-  const getSaidanButtonDisabled = () => {
-    // すべての処理が実行できない場合は無効
-    return (
-      rowIndexToCut === null &&
-      numberOfColumnsToCut === 0 &&
-      (!localRowsPerFile || localRowsPerFile <= 0)
-    );
-  };
 
   if (!originalData) {
     return (
@@ -195,13 +171,26 @@ function App() {
                   id="rowsPerFile"
                   type="number"
                   min="1"
-                  value={localRowsPerFile}
+                  value={localRowsPerFile ?? ''}
                   onChange={(e) => {
-                    const value = Number.parseInt(e.target.value) || 0;
+                    const value = e.target.value === '' ? null : Number.parseInt(e.target.value) || null;
                     setLocalRowsPerFile(value);
                   }}
                   placeholder="100"
                 />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="includeHeader"
+                  checked={includeHeader}
+                  onCheckedChange={(checked) => setIncludeHeader(checked === true)}
+                />
+                <label
+                  htmlFor="includeHeader"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  すべてのファイルにヘッダーを含める
+                </label>
               </div>
             </div>
           </CardContent>
@@ -209,55 +198,25 @@ function App() {
 
         <Card>
           <CardContent>
-            <div>
-              {!processedData ? (
-                <>
-                  <div className="flex flex-row gap-2 w-full">
-                    <Button
-                      onClick={handleRevert}
-                      variant="outline"
-                      size="lg"
-                      className="flex-1 rounded-full"
-                    >
-                      <RotateCcw className="mr-2 h-5 w-5" />
-                      もとに戻す
-                    </Button>
-                    <Button
-                      onClick={handleSaidan}
-                      disabled={getSaidanButtonDisabled()}
-                      variant="default"
-                      size="lg"
-                      className="flex-1 rounded-full"
-                    >
-                      <Scissors className="mr-2 h-5 w-5" />
-                      サイダン！
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Button
-                    onClick={handleDownload}
-                    variant="default"
-                    size="lg"
-                    className="w-full rounded-full"
-                  >
-                    <Download className="mr-2 h-5 w-5" />
-                    {Array.isArray(processedData) && processedData.length > 0
-                      ? `${processedData.length}個のファイルをダウンロード`
-                      : 'ダウンロード'}
-                  </Button>
-                  <Button
-                    onClick={handleReset}
-                    variant="outline"
-                    size="lg"
-                    className="w-full rounded-full"
-                  >
-                    <Upload className="mr-2 h-5 w-5" />
-                    別のファイルを編集
-                  </Button>
-                </>
-              )}
+            <div className="space-y-2 flex flex-row gap-2 w-full">
+              <Button
+                onClick={handleReset}
+                variant="outline"
+                size="lg"
+                className="flex-1 rounded-full"
+              >
+                <Upload className="mr-2 h-5 w-5" />
+                別のファイルをサイダン
+              </Button>
+              <Button
+                onClick={handleDownload}
+                variant="default"
+                size="lg"
+                className="flex-1 rounded-full"
+              >
+                <Download className="mr-2 h-5 w-5" />
+                ダウンロード
+              </Button>
             </div>
           </CardContent>
         </Card>

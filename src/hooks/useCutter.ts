@@ -16,7 +16,8 @@ export function useCutter() {
     (
       rowCutCount: number,
       columnCutIndex: number | null,
-      rowsPerFile: number | null
+      rowsPerFile: number | null,
+      includeHeader: boolean
     ): ProcessedData | null => {
       if (!originalData) {
         return null;
@@ -58,10 +59,41 @@ export function useCutter() {
       // 3. 行分割処理（指定行数ごとに分割）
       if (rowsPerFile !== null && rowsPerFile > 0 && processedRows.length > 0) {
         const splits: Array<CsvData> = [];
+        // ヘッダー行を取得（元のデータの最初の行）
+        const headerRow = includeHeader && originalData.rows.length > 0 
+          ? originalData.rows[0] 
+          : null;
+        
+        // ヘッダーがある場合、カラム削除処理を適用
+        let processedHeaderRow: string[] | null = null;
+        if (headerRow) {
+          if (
+            columnCutIndex !== null &&
+            columnCutIndex > 0 &&
+            headerRow.length > 0
+          ) {
+            const columnCount = headerRow.length;
+            const cutLineIndex = columnCutIndex - 1;
+            const columnsToRemove = new Set<number>();
+            for (let i = cutLineIndex + 1; i < columnCount; i++) {
+              columnsToRemove.add(i);
+            }
+            processedHeaderRow = headerRow.filter(
+              (_, index) => !columnsToRemove.has(index)
+            );
+          } else {
+            processedHeaderRow = headerRow;
+          }
+        }
+        
         for (let i = 0; i < processedRows.length; i += rowsPerFile) {
           const chunk = processedRows.slice(i, i + rowsPerFile);
+          // ヘッダーを含める場合は先頭に追加
+          const rowsWithHeader = processedHeaderRow
+            ? [processedHeaderRow, ...chunk]
+            : chunk;
           splits.push({
-            rows: chunk,
+            rows: rowsWithHeader,
           });
         }
         return splits;
