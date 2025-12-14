@@ -100,7 +100,7 @@ export function SplitterPreview({
       onRowCutLineClick(rowIndex);
 
       // 選択解除時にはアニメーションを再生しない
-      if (rowIndexToCut === rowIndexToCut) {
+      if (rowIndexToCut === rowIndex) {
         return;
       }
 
@@ -476,7 +476,7 @@ const HorizontalCut = ({
         width: '100%',
       }}
     >
-      {isAnimating ? (
+      {isAnimating && isCutOnThisLine ? (
         <div
           className="absolute left-0 top-1/2 -translate-y-1/2 cursor-pointer"
           style={{
