@@ -13,7 +13,14 @@ import { useDownload } from '@/hooks/useDownload';
 import { useTheme } from '@/hooks/useTheme';
 import { useCutter } from '@/hooks/useCutter';
 import { type CsvFileData } from '@/hooks/useCsvProcessor';
-import { Download, Upload, Sun, Moon, Monitor, AlertCircle } from 'lucide-react';
+import {
+  Download,
+  Upload,
+  Sun,
+  Moon,
+  Monitor,
+  AlertCircle,
+} from 'lucide-react';
 
 function App() {
   const [originalFilesData, setOriginalFilesData] = useState<CsvFileData[]>([]);
@@ -59,74 +66,77 @@ function App() {
       setColumnCountError(null);
       return true;
     }
-    
+
     if (files.length === 1) {
       setColumnCountError(null);
       return true;
     }
-    
+
     // 最初のファイルのカラム数を取得
     const firstFile = files[0];
     if (firstFile.rows.length === 0) {
       setColumnCountError('カラム数が一致しません。');
       return false;
     }
-    
+
     const firstColumnCount = firstFile.rows[0].length;
     if (firstColumnCount === 0) {
       setColumnCountError('カラム数が一致しません。');
       return false;
     }
-    
+
     // 他のファイルと比較
     for (let i = 1; i < files.length; i++) {
       const currentFile = files[i];
-      
+
       if (currentFile.rows.length === 0) {
         setColumnCountError('カラム数が一致しません。');
         return false;
       }
-      
+
       const currentColumnCount = currentFile.rows[0].length;
       if (currentColumnCount !== firstColumnCount) {
         setColumnCountError('カラム数が一致しません。');
         return false;
       }
     }
-    
+
     setColumnCountError(null);
     return true;
   }, []);
 
-  const handleCsvLoaded = useCallback((files: CsvFileData[]) => {
-    // カラム数検証
-    if (!validateColumnCounts(files)) {
-      // エラーがある場合は、ファイルデータをクリアしてエラー表示のみ
-      setOriginalFilesData([]);
-      resetCutter();
-      return;
-    }
+  const handleCsvLoaded = useCallback(
+    (files: CsvFileData[]) => {
+      // カラム数検証
+      if (!validateColumnCounts(files)) {
+        // エラーがある場合は、ファイルデータをクリアしてエラー表示のみ
+        setOriginalFilesData([]);
+        resetCutter();
+        return;
+      }
 
-    // エラーをクリア
-    setColumnCountError(null);
+      // エラーをクリア
+      setColumnCountError(null);
 
-    // 複数ファイルの場合
-    if (files.length > 1) {
-      setOriginalFilesData(files);
-      setFilesData(files);
-    } else if (files.length === 1) {
-      // 単一ファイルの場合（後方互換性）
-      setOriginalFilesData(files);
-      setFilesData(files);
-      setData({ rows: files[0].rows });
-    }
-    
-    setNumberOfColumnsToCut(null);
-    setRowIndexToDisplay(0);
-    setRowIndexToCut(null);
-    setLocalRowsPerFile(null);
-    setIncludeHeader(false);
-  }, [validateColumnCounts, setFilesData, setData, resetCutter]);
+      // 複数ファイルの場合
+      if (files.length > 1) {
+        setOriginalFilesData(files);
+        setFilesData(files);
+      } else if (files.length === 1) {
+        // 単一ファイルの場合（後方互換性）
+        setOriginalFilesData(files);
+        setFilesData(files);
+        setData({ rows: files[0].rows });
+      }
+
+      setNumberOfColumnsToCut(null);
+      setRowIndexToDisplay(0);
+      setRowIndexToCut(null);
+      setLocalRowsPerFile(null);
+      setIncludeHeader(false);
+    },
+    [validateColumnCounts, setFilesData, setData, resetCutter]
+  );
 
   const handleDownload = async () => {
     // 複数ファイルの場合
@@ -152,7 +162,9 @@ function App() {
       const result = processFilesData(
         rowIndexToCut ?? 0,
         numberOfColumnsToCut,
-        localRowsPerFile !== null && localRowsPerFile > 0 ? localRowsPerFile : null,
+        localRowsPerFile !== null && localRowsPerFile > 0
+          ? localRowsPerFile
+          : null,
         includeHeader
       );
 
@@ -170,7 +182,9 @@ function App() {
     const canProcess =
       rowIndexToCut !== null ||
       numberOfColumnsToCut !== null ||
-      (localRowsPerFile !== null && localRowsPerFile > 0 && localRowsPerFile < originalData.rows.length);
+      (localRowsPerFile !== null &&
+        localRowsPerFile > 0 &&
+        localRowsPerFile < originalData.rows.length);
 
     if (!canProcess) {
       downloadCsv(originalData.rows, 'data.csv');
@@ -180,7 +194,9 @@ function App() {
     const result = processData(
       rowIndexToCut ?? 0,
       numberOfColumnsToCut,
-      localRowsPerFile !== null && localRowsPerFile > 0 ? localRowsPerFile : null,
+      localRowsPerFile !== null && localRowsPerFile > 0
+        ? localRowsPerFile
+        : null,
       includeHeader
     );
 
@@ -301,7 +317,10 @@ function App() {
                   min="1"
                   value={localRowsPerFile ?? ''}
                   onChange={(e) => {
-                    const value = e.target.value === '' ? null : Number.parseInt(e.target.value) || null;
+                    const value =
+                      e.target.value === ''
+                        ? null
+                        : Number.parseInt(e.target.value) || null;
                     setLocalRowsPerFile(value);
                   }}
                   placeholder="100"
@@ -311,7 +330,9 @@ function App() {
                 <Checkbox
                   id="includeHeader"
                   checked={includeHeader}
-                  onCheckedChange={(checked) => setIncludeHeader(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setIncludeHeader(checked === true)
+                  }
                 />
                 <label
                   htmlFor="includeHeader"

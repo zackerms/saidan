@@ -36,7 +36,11 @@ export function useDownload() {
 
   const downloadMultiple = useCallback(
     async (
-      files: Array<{ rows: string[][]; filename: string; originalFilename?: string }>,
+      files: Array<{
+        rows: string[][];
+        filename: string;
+        originalFilename?: string;
+      }>,
       originalFiles?: CsvFileData[]
     ) => {
       // ZIPファイルを作成
@@ -44,11 +48,14 @@ export function useDownload() {
 
       // originalFilenameがある場合、階層構造で整理
       const hasOriginalFilename = files.some((f) => f.originalFilename);
-      
+
       if (hasOriginalFilename) {
         // 元のファイルごとにグループ化
-        const fileGroups = new Map<string, Array<{ rows: string[][]; filename: string }>>();
-        
+        const fileGroups = new Map<
+          string,
+          Array<{ rows: string[][]; filename: string }>
+        >();
+
         files.forEach((file) => {
           if (file.originalFilename) {
             const folderName = getFolderName(file.originalFilename);
@@ -61,7 +68,9 @@ export function useDownload() {
             });
           } else {
             // originalFilenameがない場合は、ファイル名から推測
-            const folderName = getFolderName(file.filename.replace(/_\d+\.csv$/i, '.csv'));
+            const folderName = getFolderName(
+              file.filename.replace(/_\d+\.csv$/i, '.csv')
+            );
             if (!fileGroups.has(folderName)) {
               fileGroups.set(folderName, []);
             }
@@ -81,13 +90,18 @@ export function useDownload() {
         });
       } else if (originalFiles && originalFiles.length > 0) {
         // originalFilenameがないが、originalFilesがある場合
-        const fileGroups = new Map<string, Array<{ rows: string[][]; filename: string }>>();
-        
+        const fileGroups = new Map<
+          string,
+          Array<{ rows: string[][]; filename: string }>
+        >();
+
         files.forEach((file) => {
           // ファイル名から元のファイル名を推測
           const baseName = file.filename.replace(/_\d+\.csv$/i, '.csv');
-          const originalFile = originalFiles.find((f) => f.filename === baseName);
-          
+          const originalFile = originalFiles.find(
+            (f) => f.filename === baseName
+          );
+
           if (originalFile) {
             const folderName = getFolderName(originalFile.filename);
             if (!fileGroups.has(folderName)) {
@@ -96,7 +110,9 @@ export function useDownload() {
             fileGroups.get(folderName)!.push(file);
           } else {
             // 元のファイルが見つからない場合は、ファイル名から推測
-            const folderName = getFolderName(file.filename.replace(/_\d+\.csv$/i, '.csv'));
+            const folderName = getFolderName(
+              file.filename.replace(/_\d+\.csv$/i, '.csv')
+            );
             if (!fileGroups.has(folderName)) {
               fileGroups.set(folderName, []);
             }

@@ -2,7 +2,11 @@ import { useState, useCallback } from 'react';
 import type { CsvData, CsvFileData } from './useCsvProcessor';
 
 export type ProcessedData = CsvData | Array<CsvData>;
-export type ProcessedFileData = Array<{ rows: string[][]; filename: string; originalFilename: string }>;
+export type ProcessedFileData = Array<{
+  rows: string[][];
+  filename: string;
+  originalFilename: string;
+}>;
 
 export function useCutter() {
   const [originalData, setOriginalData] = useState<CsvData | null>(null);
@@ -67,10 +71,11 @@ export function useCutter() {
       if (rowsPerFile !== null && rowsPerFile > 0 && processedRows.length > 0) {
         const splits: Array<CsvData> = [];
         // ヘッダー行を取得（元のデータの最初の行）
-        const headerRow = includeHeader && originalData.rows.length > 0 
-          ? originalData.rows[0] 
-          : null;
-        
+        const headerRow =
+          includeHeader && originalData.rows.length > 0
+            ? originalData.rows[0]
+            : null;
+
         // ヘッダーがある場合、カラム削除処理を適用
         let processedHeaderRow: string[] | null = null;
         if (headerRow) {
@@ -92,7 +97,7 @@ export function useCutter() {
             processedHeaderRow = headerRow;
           }
         }
-        
+
         for (let i = 0; i < processedRows.length; i += rowsPerFile) {
           const chunk = processedRows.slice(i, i + rowsPerFile);
           // ヘッダーを含める場合は先頭に追加
@@ -124,7 +129,11 @@ export function useCutter() {
         return null;
       }
 
-      const processedFiles: Array<{ rows: string[][]; filename: string; originalFilename: string }> = [];
+      const processedFiles: Array<{
+        rows: string[][];
+        filename: string;
+        originalFilename: string;
+      }> = [];
 
       for (const fileData of originalFilesData) {
         let processedRows = fileData.rows;
@@ -158,12 +167,19 @@ export function useCutter() {
         }
 
         // 3. 行分割処理（指定行数ごとに分割）
-        if (rowsPerFile !== null && rowsPerFile > 0 && processedRows.length > 0) {
-          const splits: Array<{ rows: string[][]; filename: string; originalFilename: string }> = [];
-          const headerRow = includeHeader && fileData.rows.length > 0 
-            ? fileData.rows[0] 
-            : null;
-          
+        if (
+          rowsPerFile !== null &&
+          rowsPerFile > 0 &&
+          processedRows.length > 0
+        ) {
+          const splits: Array<{
+            rows: string[][];
+            filename: string;
+            originalFilename: string;
+          }> = [];
+          const headerRow =
+            includeHeader && fileData.rows.length > 0 ? fileData.rows[0] : null;
+
           let processedHeaderRow: string[] | null = null;
           if (headerRow) {
             if (
@@ -184,7 +200,7 @@ export function useCutter() {
               processedHeaderRow = headerRow;
             }
           }
-          
+
           const baseFilename = fileData.filename.replace(/\.csv$/i, '');
           for (let i = 0; i < processedRows.length; i += rowsPerFile) {
             const chunk = processedRows.slice(i, i + rowsPerFile);

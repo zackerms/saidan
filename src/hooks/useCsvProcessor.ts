@@ -46,46 +46,56 @@ export function useCsvProcessor() {
     });
   }, []);
 
-  const parseMultipleCsv = useCallback(async (files: File[]): Promise<CsvFileData[]> => {
-    setIsProcessing(true);
-    setError(null);
+  const parseMultipleCsv = useCallback(
+    async (files: File[]): Promise<CsvFileData[]> => {
+      setIsProcessing(true);
+      setError(null);
 
-    const parsePromises = files.map((file) => {
-      return new Promise<CsvFileData>((resolve, reject) => {
-        Papa.parse(file, {
-          complete: (results) => {
-            if (results.errors.length > 0) {
-              reject(new Error(`ファイル "${file.name}": ${results.errors.map((e) => e.message).join(', ')}`));
-              return;
-            }
+      const parsePromises = files.map((file) => {
+        return new Promise<CsvFileData>((resolve, reject) => {
+          Papa.parse(file, {
+            complete: (results) => {
+              if (results.errors.length > 0) {
+                reject(
+                  new Error(
+                    `ファイル "${file.name}": ${results.errors.map((e) => e.message).join(', ')}`
+                  )
+                );
+                return;
+              }
 
-            if (results.data.length === 0) {
-              reject(new Error(`ファイル "${file.name}": CSVファイルが空です`));
-              return;
-            }
+              if (results.data.length === 0) {
+                reject(
+                  new Error(`ファイル "${file.name}": CSVファイルが空です`)
+                );
+                return;
+              }
 
-            const rows = results.data as string[][];
-            resolve({ rows, filename: file.name });
-          },
-          error: (error) => {
-            reject(new Error(`ファイル "${file.name}": ${error.message}`));
-          },
-          skipEmptyLines: true,
+              const rows = results.data as string[][];
+              resolve({ rows, filename: file.name });
+            },
+            error: (error) => {
+              reject(new Error(`ファイル "${file.name}": ${error.message}`));
+            },
+            skipEmptyLines: true,
+          });
         });
       });
-    });
 
-    try {
-      const results = await Promise.all(parsePromises);
-      setIsProcessing(false);
-      return results;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'ファイルのパースに失敗しました';
-      setError(errorMessage);
-      setIsProcessing(false);
-      throw err;
-    }
-  }, []);
+      try {
+        const results = await Promise.all(parsePromises);
+        setIsProcessing(false);
+        return results;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'ファイルのパースに失敗しました';
+        setError(errorMessage);
+        setIsProcessing(false);
+        throw err;
+      }
+    },
+    []
+  );
 
   const reset = useCallback(() => {
     setCsvData(null);
