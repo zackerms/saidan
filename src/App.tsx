@@ -201,60 +201,64 @@ function App() {
                   placeholder="100"
                 />
               </div>
-              <div className="flex flex-row gap-2 w-full">
-                <Button
-                  onClick={handleRevert}
-                  variant="outline"
-                  size="lg"
-                  className="flex-1 rounded-full"
-                >
-                  <RotateCcw className="mr-2 h-5 w-5" />
-                  もとに戻す
-                </Button>
-                <Button
-                  onClick={handleSaidan}
-                  disabled={getSaidanButtonDisabled()}
-                  variant="default"
-                  size="lg"
-                  className="flex-1 rounded-full"
-                >
-                  <Scissors className="mr-2 h-5 w-5" />
-                  サイダン！
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* アクションボタン */}
-        {processedData && (
-          <Card>
-            <CardContent>
-              <div className="space-y-3">
-                <Button
-                  onClick={handleDownload}
-                  variant="default"
-                  size="lg"
-                  className="w-full rounded-full"
-                >
-                  <Download className="mr-2 h-5 w-5" />
-                  {Array.isArray(processedData) && processedData.length > 0
-                    ? `${processedData.length}個のファイルをダウンロード`
-                    : 'ダウンロード'}
-                </Button>
-                <Button
-                  onClick={handleReset}
-                  variant="outline"
-                  size="lg"
-                  className="w-full rounded-full"
-                >
-                  <Upload className="mr-2 h-5 w-5" />
-                  別のファイルを編集
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardContent>
+            <div>
+              {!processedData ? (
+                <>
+                  <div className="flex flex-row gap-2 w-full">
+                    <Button
+                      onClick={handleRevert}
+                      variant="outline"
+                      size="lg"
+                      className="flex-1 rounded-full"
+                    >
+                      <RotateCcw className="mr-2 h-5 w-5" />
+                      もとに戻す
+                    </Button>
+                    <Button
+                      onClick={handleSaidan}
+                      disabled={getSaidanButtonDisabled()}
+                      variant="default"
+                      size="lg"
+                      className="flex-1 rounded-full"
+                    >
+                      <Scissors className="mr-2 h-5 w-5" />
+                      サイダン！
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={handleDownload}
+                    variant="default"
+                    size="lg"
+                    className="w-full rounded-full"
+                  >
+                    <Download className="mr-2 h-5 w-5" />
+                    {Array.isArray(processedData) && processedData.length > 0
+                      ? `${processedData.length}個のファイルをダウンロード`
+                      : 'ダウンロード'}
+                  </Button>
+                  <Button
+                    onClick={handleReset}
+                    variant="outline"
+                    size="lg"
+                    className="w-full rounded-full"
+                  >
+                    <Upload className="mr-2 h-5 w-5" />
+                    別のファイルを編集
+                  </Button>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
