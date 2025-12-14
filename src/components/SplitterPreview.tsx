@@ -323,6 +323,7 @@ const Cell = ({
     }
   }, [
     cellRef,
+    rowIndex,
     rowIndexInTable,
     columnIndex,
     rowIndexToCut,
