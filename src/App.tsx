@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { CsvUploader } from '@/components/CsvUploader';
-import { SplitterPreview } from '@/components/SplitterPreview';
+import {
+  SplitterPreview,
+  type RowCutLineClickHandler,
+} from '@/components/SplitterPreview';
 import { useDownload } from '@/hooks/useDownload';
 import { useTheme } from '@/hooks/useTheme';
 import { useCutter, type ProcessedData } from '@/hooks/useCutter';
@@ -19,8 +22,8 @@ import {
 
 function App() {
   const [originalFilename, setOriginalFilename] = useState<string | null>(null);
-  const [localRowCutCount, setLocalRowCutCount] = useState<number>(0);
-  const [isRowCutSelected, setIsRowCutSelected] = useState<boolean>(false);
+  const [rowIndexToDisplay, setRowIndexToDisplay] = useState<number>(0);
+  const [rowIndexToCut, setRowIndexToCut] = useState<number | null>(null);
   const [numberOfColumnsToCut, setNumberOfColumnsToCut] = useState<
     number | null
   >(null);
@@ -55,7 +58,6 @@ function App() {
     // 1ファイルあたりの行数の初期値を入力ファイルの行数に設定
     const initialRowsPerFile = data.rows.length;
     setLocalRowsPerFile(initialRowsPerFile);
-    setLocalRowCutCount(0);
     setNumberOfColumnsToCut(null);
     setProcessedData(null);
   };
@@ -92,27 +94,36 @@ function App() {
   const handleReset = () => {
     resetCutter();
     setOriginalFilename(null);
-    setLocalRowCutCount(0);
     setNumberOfColumnsToCut(null);
+    setRowIndexToDisplay(0);
+    setRowIndexToCut(null);
     setProcessedData(null);
   };
 
   const handleRevert = () => {
     revert();
     setNumberOfColumnsToCut(null);
-    setLocalRowCutCount(0);
-    setIsRowCutSelected(false);
+    setRowIndexToCut(null);
+    setRowIndexToDisplay(0);
     setProcessedData(null);
   };
 
-  const handleRowCutLineClick = () => {
-    // ハサミアイコンをクリックしたときの処理（選択状態を切り替え）
-    setIsRowCutSelected((prev) => !prev);
-  };
+  const handleRowCutLineClick: RowCutLineClickHandler = useCallback(
+    (rowIndex: number) => {
+      // ハサミアイコンをクリックしたときの処理（選択状態を切り替え）
+      setRowIndexToCut((prev) => {
+        if (prev === rowIndex) {
+          return null;
+        }
+        return rowIndex;
+      });
+    },
+    []
+  );
 
   const handleSaidan = () => {
     const result = processData(
-      localRowCutCount,
+      rowIndexToCut ?? 0,
       numberOfColumnsToCut,
       localRowsPerFile > 0 ? localRowsPerFile : null
     );
@@ -122,7 +133,7 @@ function App() {
   const getSaidanButtonDisabled = () => {
     // すべての処理が実行できない場合は無効
     return (
-      localRowCutCount === 0 &&
+      rowIndexToCut === null &&
       numberOfColumnsToCut === 0 &&
       (!localRowsPerFile || localRowsPerFile <= 0)
     );
@@ -160,9 +171,9 @@ function App() {
                   <CardContent>
                     <SplitterPreview
                       rows={originalData.rows}
-                      numberOfColumnsToCut={numberOfColumnsToCut}
-                      numberOfRowsToCut={localRowCutCount}
-                      isRowCutSelected={isRowCutSelected}
+                      columnIndexToCut={numberOfColumnsToCut}
+                      rowIndexToDisplay={rowIndexToDisplay}
+                      rowIndexToCut={rowIndexToCut}
                       onColumnCutLineClick={(index) =>
                         setNumberOfColumnsToCut(index + 1)
                       }
@@ -183,25 +194,21 @@ function App() {
                         htmlFor="rowCutCount"
                         className="block text-sm font-medium mb-2"
                       >
-                        最初の行をカット
+                        行目から表示
                       </label>
                       <Input
                         id="rowCutCount"
                         type="number"
                         min="0"
                         max={originalData.rows.length}
-                        value={localRowCutCount}
+                        value={rowIndexToDisplay}
                         onChange={(e) => {
                           const value = Number.parseInt(e.target.value) || 0;
                           const newValue = Math.max(
                             0,
                             Math.min(value, originalData.rows.length)
                           );
-                          setLocalRowCutCount(newValue);
-                          // 行カット数が変更されたら選択状態をリセット
-                          if (newValue === 0) {
-                            setIsRowCutSelected(false);
-                          }
+                          setRowIndexToDisplay(newValue);
                         }}
                         placeholder="0"
                       />

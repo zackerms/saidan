@@ -5,21 +5,23 @@ interface SplitterPreviewProps {
   rows: string[][];
   rowHeight?: number;
   maxRows?: number;
-  numberOfRowsToCut: number;
-  numberOfColumnsToCut: number | null;
-  isRowCutSelected: boolean;
+  columnIndexToCut: number | null;
+  rowIndexToDisplay: number | null;
+  rowIndexToCut: number | null;
   appliedColumnCutLines?: Set<number>;
   onColumnCutLineClick: (index: number) => void;
-  onRowCutLineClick: () => void;
+  onRowCutLineClick: RowCutLineClickHandler;
 }
+
+export type RowCutLineClickHandler = (rowNumber: number) => void;
 
 export function SplitterPreview({
   rows,
   rowHeight = 40,
   maxRows = 10,
-  numberOfRowsToCut,
-  numberOfColumnsToCut,
-  isRowCutSelected,
+  columnIndexToCut,
+  rowIndexToDisplay,
+  rowIndexToCut,
   onColumnCutLineClick,
   onRowCutLineClick,
 }: SplitterPreviewProps) {
@@ -51,26 +53,23 @@ export function SplitterPreview({
 
   // カット行の1行前をトップに表示するための計算
   const displayStartRowIndex = useMemo(() => {
-    if (numberOfRowsToCut > 0 && numberOfRowsToCut <= rows.length) {
-      // カット行の1行前（rowCutCount - 1）から表示開始
-      return Math.max(0, numberOfRowsToCut - 1);
+    if (rowIndexToDisplay !== null) {
+      return Math.max(0, rowIndexToDisplay);
     }
     return 0;
-  }, [numberOfRowsToCut, rows.length]);
+  }, [rowIndexToCut, rows.length]);
 
   const displayRows = useMemo(() => {
-    return rows.slice(displayStartRowIndex, displayStartRowIndex + maxRows);
-  }, [rows, displayStartRowIndex, maxRows]);
+    const startIndex = rowIndexToDisplay ?? 0;
+    return rows.slice(startIndex, startIndex + maxRows);
+  }, [rows, rowIndexToDisplay, maxRows]);
 
-  const rowPositionToCut = useMemo(() => {
-    if (
-      numberOfRowsToCut === null ||
-      numberOfRowsToCut === 0 ||
-      numberOfRowsToCut > rows.length
-    )
-      return null;
-    return (numberOfRowsToCut - displayStartRowIndex) * rowHeight;
-  }, [numberOfRowsToCut, rows.length, rowHeight, displayStartRowIndex]);
+  const offsetYInTableToCut = useMemo(() => {
+    if (rowIndexToCut !== null) {
+      return (rowIndexToCut - displayStartRowIndex + 1) * rowHeight;
+    }
+    return null;
+  }, [rowIndexToCut, displayStartRowIndex, rowHeight]);
 
   const onUpdateColumnWidth = useCallback((index: number, width: number) => {
     setColumnWidths((prev) => {
@@ -111,20 +110,22 @@ export function SplitterPreview({
     [onColumnCutLineClick]
   );
 
-  const handleRowCutLineClick = useCallback(() => {
-    // 解除時はアニメーションと音を再生しない
-    if (isRowCutSelected) {
-      onRowCutLineClick();
-      return;
-    }
+  const handleRowCutLineClick: RowCutLineClickHandler = useCallback(
+    (rowIndex: number) => {
+      onRowCutLineClick(rowIndex);
 
-    // 追加時のみアニメーションと音を再生
-    onRowCutLineClick();
-    setAnimatingRowLine(true);
-    setTimeout(() => {
-      setAnimatingRowLine(false);
-    }, 1000);
-  }, [onRowCutLineClick, isRowCutSelected]);
+      // 選択解除時にはアニメーションを再生しない
+      if (rowIndexToCut === rowIndexToCut) {
+        return;
+      }
+
+      setAnimatingRowLine(true);
+      setTimeout(() => {
+        setAnimatingRowLine(false);
+      }, 1000);
+    },
+    [onRowCutLineClick, rowIndexToCut]
+  );
 
   return (
     <div className="space-y-4">
@@ -132,17 +133,17 @@ export function SplitterPreview({
         <div className="overflow-x-auto">
           <table className="w-full" ref={tableRef}>
             <tbody>
-              {displayRows.map((row, rowIndex) => {
+              {displayRows.map((row, rowIndexInTable) => {
                 return (
                   <Row
-                    key={rowIndex}
+                    key={rowIndexInTable}
                     row={row}
-                    rowIndex={rowIndex}
+                    rowIndex={rowIndexInTable + displayStartRowIndex}
+                    rowIndexInTable={rowIndexInTable}
                     rowHeight={rowHeight}
-                    isRowCut={isRowCutSelected}
-                    displayStartRowIndex={displayStartRowIndex}
-                    numberOfRowsToCut={numberOfRowsToCut}
-                    numberOfColumnsToCut={numberOfColumnsToCut}
+                    rowIndexToCut={rowIndexToCut}
+                    rowIndexToDisplay={rowIndexToDisplay}
+                    columnIndexToCut={columnIndexToCut}
                     columnCount={columnCount}
                     hoveredColumnLineIndex={hoveredColumnLineIndex}
                     onMouseEnterOnColumnLine={onMouseEnterOnColumnLine}
@@ -165,10 +166,10 @@ export function SplitterPreview({
             <VerticalCut
               key={lineIndex}
               columnIndex={lineIndex}
+              columnIndexToCut={columnIndexToCut}
               columnPosition={columnPositions[lineIndex]}
               isSelected={
-                numberOfColumnsToCut !== null &&
-                numberOfColumnsToCut - 1 <= lineIndex
+                columnIndexToCut !== null && columnIndexToCut - 1 <= lineIndex
               }
               isAnimating={animatingColumnLines.has(lineIndex)}
               onColumnCutLineClick={handleOnColumnCutLineClick}
@@ -176,10 +177,10 @@ export function SplitterPreview({
           );
         })}
         {/* 行カット用ハサミアイコンの表示 */}
-        {rowPositionToCut !== null && (
+        {offsetYInTableToCut !== null && (
           <HorizontalCut
-            rowPosition={rowPositionToCut}
-            isSelected={isRowCutSelected}
+            offsetYInTable={offsetYInTableToCut}
+            rowIndex={rowIndexToCut}
             isAnimating={animatingRowLine}
             onRowCutLineClick={handleRowCutLineClick}
           />
@@ -192,12 +193,11 @@ export function SplitterPreview({
 const Row = ({
   row,
   rowIndex,
+  rowIndexInTable,
   rowHeight,
-  displayStartRowIndex,
-  numberOfRowsToCut,
-  isRowCut,
+  rowIndexToCut,
   columnCount,
-  numberOfColumnsToCut,
+  columnIndexToCut,
   hoveredColumnLineIndex,
   onMouseEnterOnColumnLine,
   onMouseLeaveOnColumnLine,
@@ -207,27 +207,27 @@ const Row = ({
 }: {
   row: string[];
   rowIndex: number;
+  rowIndexInTable: number;
+  rowIndexToCut: number | null;
+  rowIndexToDisplay: number | null;
   rowHeight: number;
-  displayStartRowIndex: number;
-  numberOfRowsToCut: number;
-  // サイダン処理が行われたか
-  isRowCut: boolean;
   columnCount: number;
-  numberOfColumnsToCut: number | null;
+  columnIndexToCut: number | null;
   hoveredColumnLineIndex: number | null;
   onColumnCutLineClick: (index: number) => void;
   onMouseEnterOnColumnLine: (index: number) => void;
   onMouseLeaveOnColumnLine: (index: number) => void;
-  onRowCutLineClick: () => void;
+  onRowCutLineClick: RowCutLineClickHandler;
   onUpdateColumnWidth: (index: number, width: number) => void;
 }) => {
-  const actualRowIndex = useMemo(
-    () => displayStartRowIndex + rowIndex,
-    [displayStartRowIndex, rowIndex]
+  const isRowCut = useMemo(
+    () => rowIndexToCut !== null && rowIndexToCut === rowIndex,
+    [rowIndexToCut, rowIndex]
   );
+
   const isInCutRowRange = useMemo(
-    () => numberOfRowsToCut > 0 && actualRowIndex < numberOfRowsToCut,
-    [numberOfRowsToCut, actualRowIndex]
+    () => rowIndexToCut !== null && rowIndex < rowIndexToCut,
+    [rowIndexToCut, rowIndex]
   );
 
   return (
@@ -240,12 +240,12 @@ const Row = ({
           cell={cell}
           columnIndex={cellIndex}
           rowIndex={rowIndex}
-          actualRowIndex={actualRowIndex}
+          rowIndexInTable={rowIndexInTable}
           rowHeight={rowHeight}
           isRowCut={isRowCut}
           columnCount={columnCount}
-          numberOfRowsToCut={numberOfRowsToCut}
-          numberOfColumnsToCut={numberOfColumnsToCut}
+          rowIndexToCut={rowIndexToCut}
+          columnIndexToCut={columnIndexToCut}
           hoveredColumnLineIndex={hoveredColumnLineIndex}
           onColumnCutLineClick={onColumnCutLineClick}
           onMouseEnterOnColumnLine={onMouseEnterOnColumnLine}
@@ -262,12 +262,12 @@ const Cell = ({
   cell,
   columnIndex,
   rowIndex,
-  actualRowIndex,
+  rowIndexInTable,
   rowHeight,
   isRowCut,
   columnCount,
-  numberOfRowsToCut,
-  numberOfColumnsToCut,
+  rowIndexToCut,
+  columnIndexToCut,
   hoveredColumnLineIndex,
   onColumnCutLineClick,
   onMouseEnterOnColumnLine,
@@ -278,34 +278,34 @@ const Cell = ({
   cell: string;
   columnIndex: number;
   rowIndex: number;
-  actualRowIndex: number;
+  rowIndexInTable: number;
   rowHeight: number;
   isRowCut: boolean;
   columnCount: number;
-  numberOfRowsToCut: number;
-  numberOfColumnsToCut: number | null;
+  rowIndexToCut: number | null;
+  columnIndexToCut: number | null;
   hoveredColumnLineIndex: number | null;
   onColumnCutLineClick: (index: number) => void;
   onMouseEnterOnColumnLine: (index: number) => void;
   onMouseLeaveOnColumnLine: (index: number) => void;
-  onRowCutLineClick: () => void;
+  onRowCutLineClick: RowCutLineClickHandler;
   onUpdateColumnWidth: (index: number, width: number) => void;
 }) => {
   const cellRef = useRef<HTMLTableCellElement>(null);
 
   const isCutOnBottomBorder = useMemo(
-    () =>
-      numberOfRowsToCut !== null && numberOfRowsToCut - 1 === actualRowIndex,
-    [numberOfRowsToCut, actualRowIndex]
+    () => rowIndexToCut !== null && rowIndexToCut === rowIndex,
+    [rowIndexToCut, rowIndex]
   );
+
   const isCutOnRightBorder = useMemo(
-    () =>
-      numberOfColumnsToCut !== null && numberOfColumnsToCut - 1 <= columnIndex,
-    [numberOfColumnsToCut, columnIndex]
+    () => columnIndexToCut !== null && columnIndexToCut - 1 <= columnIndex,
+    [columnIndexToCut, columnIndex]
   );
+
   const isInCutColumnRange = useMemo(
-    () => numberOfColumnsToCut !== null && numberOfColumnsToCut <= columnIndex,
-    [numberOfColumnsToCut, columnIndex]
+    () => columnIndexToCut !== null && columnIndexToCut <= columnIndex,
+    [columnIndexToCut, columnIndex]
   );
 
   const onMouseEnter = useCallback(() => {
@@ -320,8 +320,12 @@ const Cell = ({
     onColumnCutLineClick(columnIndex);
   }, [columnIndex, onColumnCutLineClick]);
 
+  const handleOnRowCutLineClick = useCallback(() => {
+    onRowCutLineClick(rowIndex);
+  }, [rowIndex, onRowCutLineClick]);
+
   useEffect(() => {
-    if (rowIndex === 0) {
+    if (rowIndexInTable === 0) {
       const updateColumnWidth = () => {
         const cellRect = cellRef.current?.getBoundingClientRect();
         if (!cellRect) return;
@@ -331,7 +335,13 @@ const Cell = ({
       updateColumnWidth();
       window.addEventListener('resize', updateColumnWidth);
     }
-  }, [cellRef, rowIndex, columnIndex, numberOfRowsToCut, onUpdateColumnWidth]);
+  }, [
+    cellRef,
+    rowIndexInTable,
+    columnIndex,
+    rowIndexToCut,
+    onUpdateColumnWidth,
+  ]);
 
   return (
     <td
@@ -346,21 +356,19 @@ const Cell = ({
       }}
       ref={cellRef}
     >
-      {isCutOnBottomBorder && (
-        <div
-          className={`absolute bottom-0 left-0 right-0 cursor-pointer transition-all z-10 border-b ${
-            isRowCut
-              ? 'border-red-500 border-solid'
-              : 'border-primary/30 border-dashed'
-          }`}
-          onClick={onRowCutLineClick}
-          style={{
-            bottom: '0',
-            height: '20px',
-            borderBottomWidth: '2px',
-          }}
-        />
-      )}
+      <div
+        className={`absolute bottom-0 left-0 right-0 cursor-pointer transition-all z-10 border-b ${
+          isRowCut && isCutOnBottomBorder
+            ? 'border-red-500 border-solid'
+            : 'border-primary/30 border-dashed'
+        }`}
+        onClick={handleOnRowCutLineClick}
+        style={{
+          bottom: '0',
+          height: '20px',
+          borderBottomWidth: '2px',
+        }}
+      />
       {isInCutColumnRange && (
         <div className="absolute top-0 left-0 right-0 h-full bg-red-500/10 pointer-events-none" />
       )}
@@ -391,17 +399,24 @@ const Cell = ({
 
 const VerticalCut = ({
   columnIndex,
+  columnIndexToCut,
   columnPosition,
   isSelected,
   isAnimating,
   onColumnCutLineClick,
 }: {
   columnIndex: number;
+  columnIndexToCut: number | null;
   columnPosition: number | null;
   isSelected: boolean;
   isAnimating: boolean;
   onColumnCutLineClick: (index: number) => void;
 }) => {
+  const isCutOnThisLine = useMemo(() => {
+    if (!columnIndexToCut) return false;
+    return columnIndexToCut - 1 === columnIndex;
+  }, [columnIndexToCut, columnIndex]);
+
   const handleOnColumnCutLineClick = useCallback(() => {
     onColumnCutLineClick(columnIndex);
   }, [columnIndex, onColumnCutLineClick]);
@@ -430,37 +445,46 @@ const VerticalCut = ({
           </div>
         </div>
       ) : (
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
-          onClick={handleOnColumnCutLineClick}
-        >
-          <div className="bg-background rounded-full p-1">
-            <Scissors
-              className={`h-5 w-5 ${isSelected ? 'text-red-500' : 'text-primary/40'}`}
-            />
+        isCutOnThisLine && (
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
+            onClick={handleOnColumnCutLineClick}
+          >
+            <div className="bg-background rounded-full p-1">
+              <Scissors
+                className={`h-5 w-5 ${isSelected ? 'text-red-500' : 'text-primary/40'}`}
+              />
+            </div>
           </div>
-        </div>
+        )
       )}
     </div>
   );
 };
 
 const HorizontalCut = ({
-  rowPosition,
-  isSelected,
+  offsetYInTable,
+  rowIndex,
+  isSelected = true,
   isAnimating,
   onRowCutLineClick,
 }: {
-  rowPosition: number | null;
-  isSelected: boolean;
+  rowIndex: number | null;
+  offsetYInTable: number;
+  isSelected?: boolean;
   isAnimating: boolean;
-  onRowCutLineClick: () => void;
+  onRowCutLineClick: RowCutLineClickHandler;
 }) => {
+  const handleOnRowCutLineClick = useCallback(() => {
+    if (!rowIndex) return;
+    onRowCutLineClick(rowIndex);
+  }, [rowIndex, onRowCutLineClick]);
+
   return (
     <div
       className="absolute left-0 z-20"
       style={{
-        top: `${rowPosition}px`,
+        top: `${offsetYInTable}px`,
         width: '100%',
       }}
     >
@@ -470,7 +494,7 @@ const HorizontalCut = ({
           style={{
             animation: 'scissorsSlideHorizontal 1s ease-in-out',
           }}
-          onClick={onRowCutLineClick}
+          onClick={handleOnRowCutLineClick}
         >
           <div className="bg-background rounded-full p-1">
             <Scissors className="h-5 w-5 text-red-500" />
@@ -479,7 +503,7 @@ const HorizontalCut = ({
       ) : (
         <div
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
-          onClick={onRowCutLineClick}
+          onClick={handleOnRowCutLineClick}
         >
           <div className="bg-background rounded-full p-1">
             <Scissors
