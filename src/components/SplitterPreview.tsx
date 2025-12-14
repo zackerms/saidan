@@ -4,7 +4,7 @@ import { Scissors } from 'lucide-react';
 interface SplitterPreviewProps {
   rows: string[][];
   rowHeight?: number;
-  maxRows?: number;
+  rowCountToDisplay?: number;
   columnIndexToCut: number | null;
   rowIndexToDisplay: number | null;
   rowIndexToCut: number | null;
@@ -18,7 +18,7 @@ export type RowCutLineClickHandler = (rowNumber: number) => void;
 export function SplitterPreview({
   rows,
   rowHeight = 40,
-  maxRows = 10,
+  rowCountToDisplay = 10,
   columnIndexToCut,
   rowIndexToDisplay,
   rowIndexToCut,
@@ -51,25 +51,10 @@ export function SplitterPreview({
     });
   }, [columnWidths]);
 
-  // カット行の1行前をトップに表示するための計算
-  const displayStartRowIndex = useMemo(() => {
-    if (rowIndexToDisplay !== null) {
-      return Math.max(0, rowIndexToDisplay);
-    }
-    return 0;
-  }, [rowIndexToCut, rows.length]);
-
   const displayRows = useMemo(() => {
     const startIndex = rowIndexToDisplay ?? 0;
-    return rows.slice(startIndex, startIndex + maxRows);
-  }, [rows, rowIndexToDisplay, maxRows]);
-
-  const offsetYInTableToCut = useMemo(() => {
-    if (rowIndexToCut !== null) {
-      return (rowIndexToCut - displayStartRowIndex + 1) * rowHeight;
-    }
-    return null;
-  }, [rowIndexToCut, displayStartRowIndex, rowHeight]);
+    return rows.slice(startIndex, startIndex + rowCountToDisplay);
+  }, [rows, rowIndexToDisplay, rowCountToDisplay]);
 
   const onUpdateColumnWidth = useCallback((index: number, width: number) => {
     setColumnWidths((prev) => {
@@ -138,7 +123,7 @@ export function SplitterPreview({
                   <Row
                     key={rowIndexInTable}
                     row={row}
-                    rowIndex={rowIndexInTable + displayStartRowIndex}
+                    rowIndex={rowIndexInTable + (rowIndexToDisplay ?? 0)}
                     rowIndexInTable={rowIndexInTable}
                     rowHeight={rowHeight}
                     rowIndexToCut={rowIndexToCut}
@@ -168,22 +153,25 @@ export function SplitterPreview({
               columnIndex={lineIndex}
               columnIndexToCut={columnIndexToCut}
               columnPosition={columnPositions[lineIndex]}
-              isSelected={
-                columnIndexToCut !== null && columnIndexToCut - 1 <= lineIndex
-              }
               isAnimating={animatingColumnLines.has(lineIndex)}
               onColumnCutLineClick={handleOnColumnCutLineClick}
             />
           );
         })}
         {/* 行カット用ハサミアイコンの表示 */}
-        {offsetYInTableToCut !== null && (
-          <HorizontalCut
-            offsetYInTable={offsetYInTableToCut}
-            rowIndex={rowIndexToCut}
-            isAnimating={animatingRowLine}
-            onRowCutLineClick={handleRowCutLineClick}
-          />
+        {Array.from({ length: rowCountToDisplay }, (_, index) => index).map(
+          (rowIndexInTable) => {
+            return (
+              <HorizontalCut
+                key={rowIndexInTable}
+                rowIndex={rowIndexInTable + (rowIndexToDisplay ?? 0)}
+                rowIndexToCut={rowIndexToCut}
+                offsetYInTable={(rowIndexInTable + 1) * rowHeight}
+                isAnimating={animatingRowLine}
+                onRowCutLineClick={handleRowCutLineClick}
+              />
+            );
+          }
         )}
       </div>
     </div>
@@ -401,14 +389,12 @@ const VerticalCut = ({
   columnIndex,
   columnIndexToCut,
   columnPosition,
-  isSelected,
   isAnimating,
   onColumnCutLineClick,
 }: {
   columnIndex: number;
   columnIndexToCut: number | null;
   columnPosition: number | null;
-  isSelected: boolean;
   isAnimating: boolean;
   onColumnCutLineClick: (index: number) => void;
 }) => {
@@ -451,9 +437,7 @@ const VerticalCut = ({
             onClick={handleOnColumnCutLineClick}
           >
             <div className="bg-background rounded-full p-1">
-              <Scissors
-                className={`h-5 w-5 ${isSelected ? 'text-red-500' : 'text-primary/40'}`}
-              />
+              <Scissors className={`h-5 w-5 text-red-500`} />
             </div>
           </div>
         )
@@ -463,18 +447,23 @@ const VerticalCut = ({
 };
 
 const HorizontalCut = ({
-  offsetYInTable,
   rowIndex,
-  isSelected = true,
+  rowIndexToCut,
+  offsetYInTable,
   isAnimating,
   onRowCutLineClick,
 }: {
   rowIndex: number | null;
+  rowIndexToCut: number | null;
   offsetYInTable: number;
-  isSelected?: boolean;
   isAnimating: boolean;
   onRowCutLineClick: RowCutLineClickHandler;
 }) => {
+  const isCutOnThisLine = useMemo(() => {
+    if (rowIndexToCut === null) return false;
+    return rowIndexToCut === rowIndex;
+  }, [rowIndexToCut, rowIndex]);
+
   const handleOnRowCutLineClick = useCallback(() => {
     if (!rowIndex) return;
     onRowCutLineClick(rowIndex);
@@ -484,7 +473,7 @@ const HorizontalCut = ({
     <div
       className="absolute left-0 z-20"
       style={{
-        top: `${offsetYInTable}px`,
+        top: offsetYInTable,
         width: '100%',
       }}
     >
@@ -501,16 +490,16 @@ const HorizontalCut = ({
           </div>
         </div>
       ) : (
-        <div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
-          onClick={handleOnRowCutLineClick}
-        >
-          <div className="bg-background rounded-full p-1">
-            <Scissors
-              className={`h-5 w-5 ${isSelected ? 'text-red-500' : 'text-primary/40'}`}
-            />
+        isCutOnThisLine && (
+          <div
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
+            onClick={handleOnRowCutLineClick}
+          >
+            <div className="bg-background rounded-full p-1">
+              <Scissors className={`h-5 w-5 text-red-500`} />
+            </div>
           </div>
-        </div>
+        )
       )}
     </div>
   );
