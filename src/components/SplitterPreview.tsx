@@ -331,7 +331,7 @@ const Cell = ({
       updateColumnWidth();
       window.addEventListener('resize', updateColumnWidth);
     }
-  }, [cellRef, rowIndex, columnIndex, onUpdateColumnWidth]);
+  }, [cellRef, rowIndex, columnIndex, numberOfRowsToCut, onUpdateColumnWidth]);
 
   return (
     <td
