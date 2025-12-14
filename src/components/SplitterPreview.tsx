@@ -36,6 +36,7 @@ export function SplitterPreview({
     x: number;
     y: number;
   } | null>(null);
+  const [isNearBorder, setIsNearBorder] = useState<boolean>(false);
   const tableRef = useRef<HTMLTableElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -117,17 +118,50 @@ export function SplitterPreview({
     [onRowCutLineClick, rowIndexToCut]
   );
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setMousePosition({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
-  }, []);
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      setMousePosition({
+        x: mouseX,
+        y: mouseY,
+      });
+
+      // ボーダー検出の閾値
+      const threshold = 5;
+      let nearBorder = false;
+
+      // カラムの縦線をチェック
+      for (let i = 0; i < columnPositions.length; i++) {
+        const borderX = columnPositions[i];
+        if (borderX !== null && Math.abs(mouseX - borderX) <= threshold) {
+          nearBorder = true;
+          break;
+        }
+      }
+
+      // 行の横線をチェック（まだ近くない場合のみ）
+      if (!nearBorder) {
+        for (let i = 0; i <= rowCountToDisplay; i++) {
+          const borderY = (i + 1) * rowHeight;
+          if (Math.abs(mouseY - borderY) <= threshold) {
+            nearBorder = true;
+            break;
+          }
+        }
+      }
+
+      setIsNearBorder(nearBorder);
+    },
+    [columnPositions, rowHeight, rowCountToDisplay]
+  );
 
   const handleMouseLeave = useCallback(() => {
     setMousePosition(null);
+    setIsNearBorder(false);
   }, []);
 
   return (
@@ -206,8 +240,14 @@ export function SplitterPreview({
               transform: 'translate(-50%, -50%)',
             }}
           >
-            <div className="rounded-full p-1 shadow-md">
-              <Scissors className="h-6 w-6 text-primary" />
+            <div className="rounded-full p-1 shadow-md transition-all duration-200">
+              <Scissors
+                className={`transition-all duration-200 ${
+                  isNearBorder
+                    ? 'h-12 w-12 text-red-500'
+                    : 'h-6 w-6 text-primary'
+                }`}
+              />
             </div>
           </div>
         )}
