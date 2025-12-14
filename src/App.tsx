@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CsvUploader } from '@/components/CsvUploader';
 import {
   SplitterPreview,
@@ -11,10 +12,12 @@ import {
 import { useDownload } from '@/hooks/useDownload';
 import { useTheme } from '@/hooks/useTheme';
 import { useCutter } from '@/hooks/useCutter';
-import { Download, Upload, Sun, Moon, Monitor } from 'lucide-react';
+import { type CsvFileData } from '@/hooks/useCsvProcessor';
+import { Download, Upload, Sun, Moon, Monitor, AlertCircle } from 'lucide-react';
 
 function App() {
-  const [originalFilename, setOriginalFilename] = useState<string | null>(null);
+  const [originalFilesData, setOriginalFilesData] = useState<CsvFileData[]>([]);
+  const [columnCountError, setColumnCountError] = useState<string | null>(null);
   const [rowIndexToDisplay, setRowIndexToDisplay] = useState<number>(0);
   const [rowIndexToCut, setRowIndexToCut] = useState<number | null>(null);
   const [numberOfColumnsToCut, setNumberOfColumnsToCut] = useState<
@@ -26,42 +29,154 @@ function App() {
   const {
     originalData,
     setData,
+    setFilesData,
     processData,
+    processFilesData,
     reset: resetCutter,
   } = useCutter();
 
+  // プレビュー用のデータ（最初のファイルのみ）
+  const previewData = useMemo(() => {
+    if (originalFilesData.length > 0) {
+      return originalFilesData[0];
+    }
+    return originalData ? { rows: originalData.rows, filename: '' } : null;
+  }, [originalFilesData, originalData]);
+
   const handleOnRowIndexToDisplayChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (!originalData) return;
+      if (!previewData) return;
       const value = Number.parseInt(e.target.value) || 0;
-      const newValue = Math.max(0, Math.min(value, originalData.rows.length));
+      const newValue = Math.max(0, Math.min(value, previewData.rows.length));
       setRowIndexToDisplay(newValue);
     },
-    [originalData]
+    [previewData]
   );
 
-  const handleCsvLoaded = (data: { rows: string[][] }, filename: string) => {
-    setData(data);
-    setOriginalFilename(filename);
-    setNumberOfColumnsToCut(null);
-  };
+  // カラム数検証
+  const validateColumnCounts = useCallback((files: CsvFileData[]): boolean => {
+    if (files.length === 0) {
+      setColumnCountError(null);
+      return true;
+    }
+    
+    if (files.length === 1) {
+      setColumnCountError(null);
+      return true;
+    }
+    
+    // 最初のファイルのカラム数を取得
+    const firstFile = files[0];
+    if (firstFile.rows.length === 0) {
+      setColumnCountError('カラム数が一致しません。');
+      return false;
+    }
+    
+    const firstColumnCount = firstFile.rows[0].length;
+    if (firstColumnCount === 0) {
+      setColumnCountError('カラム数が一致しません。');
+      return false;
+    }
+    
+    // 他のファイルと比較
+    for (let i = 1; i < files.length; i++) {
+      const currentFile = files[i];
+      
+      if (currentFile.rows.length === 0) {
+        setColumnCountError('カラム数が一致しません。');
+        return false;
+      }
+      
+      const currentColumnCount = currentFile.rows[0].length;
+      if (currentColumnCount !== firstColumnCount) {
+        setColumnCountError('カラム数が一致しません。');
+        return false;
+      }
+    }
+    
+    setColumnCountError(null);
+    return true;
+  }, []);
 
-  const handleDownload = () => {
+  const handleCsvLoaded = useCallback((files: CsvFileData[]) => {
+    // カラム数検証
+    if (!validateColumnCounts(files)) {
+      // エラーがある場合は、ファイルデータをクリアしてエラー表示のみ
+      setOriginalFilesData([]);
+      resetCutter();
+      return;
+    }
+
+    // エラーをクリア
+    setColumnCountError(null);
+
+    // 複数ファイルの場合
+    if (files.length > 1) {
+      setOriginalFilesData(files);
+      setFilesData(files);
+    } else if (files.length === 1) {
+      // 単一ファイルの場合（後方互換性）
+      setOriginalFilesData(files);
+      setFilesData(files);
+      setData({ rows: files[0].rows });
+    }
+    
+    setNumberOfColumnsToCut(null);
+    setRowIndexToDisplay(0);
+    setRowIndexToCut(null);
+    setLocalRowsPerFile(null);
+    setIncludeHeader(false);
+  }, [validateColumnCounts, setFilesData, setData, resetCutter]);
+
+  const handleDownload = async () => {
+    // 複数ファイルの場合
+    if (originalFilesData.length > 0) {
+      const canProcess =
+        rowIndexToCut !== null ||
+        numberOfColumnsToCut !== null ||
+        (localRowsPerFile !== null && localRowsPerFile > 0);
+
+      if (!canProcess) {
+        // 処理が実行できない場合は元のデータをダウンロード
+        await downloadMultiple(
+          originalFilesData.map((file) => ({
+            rows: file.rows,
+            filename: file.filename,
+          })),
+          originalFilesData
+        );
+        return;
+      }
+
+      // 処理を実行
+      const result = processFilesData(
+        rowIndexToCut ?? 0,
+        numberOfColumnsToCut,
+        localRowsPerFile !== null && localRowsPerFile > 0 ? localRowsPerFile : null,
+        includeHeader
+      );
+
+      if (!result) return;
+
+      if (Array.isArray(result)) {
+        await downloadMultiple(result, originalFilesData);
+      }
+      return;
+    }
+
+    // 単一ファイルの場合（後方互換性）
     if (!originalData) return;
 
-    // 処理が実行できない場合は元のデータをダウンロード
     const canProcess =
       rowIndexToCut !== null ||
       numberOfColumnsToCut !== null ||
       (localRowsPerFile !== null && localRowsPerFile > 0 && localRowsPerFile < originalData.rows.length);
 
     if (!canProcess) {
-      const filename = originalFilename || 'data.csv';
-      downloadCsv(originalData.rows, filename);
+      downloadCsv(originalData.rows, 'data.csv');
       return;
     }
 
-    // 処理を実行
     const result = processData(
       rowIndexToCut ?? 0,
       numberOfColumnsToCut,
@@ -71,28 +186,21 @@ function App() {
 
     if (!result) return;
 
-    // 分割されたファイルをダウンロード
     if (Array.isArray(result)) {
-      const baseFilename = originalFilename
-        ? originalFilename.replace(/\.csv$/i, '')
-        : 'split';
       const files = result.map((data, index) => ({
         rows: data.rows,
-        filename: `${baseFilename}_${index + 1}.csv`,
+        filename: `split_${index + 1}.csv`,
       }));
-      downloadMultiple(files, originalFilename || 'split');
+      await downloadMultiple(files, []);
     } else {
-      // 単一ファイルをダウンロード
-      const filename = originalFilename
-        ? originalFilename.replace(/\.csv$/i, '_processed.csv')
-        : 'processed.csv';
-      downloadCsv(result.rows, filename);
+      downloadCsv(result.rows, 'processed.csv');
     }
   };
 
   const handleReset = () => {
     resetCutter();
-    setOriginalFilename(null);
+    setOriginalFilesData([]);
+    setColumnCountError(null);
     setNumberOfColumnsToCut(null);
     setRowIndexToDisplay(0);
     setRowIndexToCut(null);
@@ -113,10 +221,19 @@ function App() {
     []
   );
 
-  if (!originalData) {
+  if (originalFilesData.length === 0 && !originalData) {
     return (
       <Layout>
-        <CsvUploader onCsvLoaded={handleCsvLoaded} />
+        <div className="flex flex-col gap-6">
+          <CsvUploader onCsvLoaded={handleCsvLoaded} />
+          {columnCountError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>エラー</AlertTitle>
+              <AlertDescription>{columnCountError}</AlertDescription>
+            </Alert>
+          )}
+        </div>
       </Layout>
     );
   }
@@ -124,33 +241,44 @@ function App() {
   return (
     <Layout>
       <div className="flex flex-col gap-6">
+        {columnCountError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>エラー</AlertTitle>
+            <AlertDescription>{columnCountError}</AlertDescription>
+          </Alert>
+        )}
         <div className="space-y-4 flex-1">
           <Card>
             <CardContent className="space-y-4">
               <h2 className="text-lg font-bold">サイダン</h2>
-              <SplitterPreview
-                rows={originalData.rows}
-                columnIndexToCut={numberOfColumnsToCut}
-                rowIndexToDisplay={rowIndexToDisplay}
-                rowIndexToCut={rowIndexToCut}
-                onColumnCutLineClick={(index) =>
-                  setNumberOfColumnsToCut(index + 1)
-                }
-                onRowCutLineClick={handleRowCutLineClick}
-              />
-              <div className="flex flex-row gap-2 justify-self-end items-center w-[200px]">
-                <Input
-                  id="rowCutCount"
-                  type="number"
-                  min="0"
-                  max={originalData.rows.length}
-                  value={rowIndexToDisplay}
-                  onChange={handleOnRowIndexToDisplayChange}
-                  placeholder="0"
-                  className="flex-1 text-right"
-                />
-                <label htmlFor="rowCutCount">行目から表示</label>
-              </div>
+              {previewData && (
+                <>
+                  <SplitterPreview
+                    rows={previewData.rows}
+                    columnIndexToCut={numberOfColumnsToCut}
+                    rowIndexToDisplay={rowIndexToDisplay}
+                    rowIndexToCut={rowIndexToCut}
+                    onColumnCutLineClick={(index) =>
+                      setNumberOfColumnsToCut(index + 1)
+                    }
+                    onRowCutLineClick={handleRowCutLineClick}
+                  />
+                  <div className="flex flex-row gap-2 justify-self-end items-center w-[200px]">
+                    <Input
+                      id="rowCutCount"
+                      type="number"
+                      min="0"
+                      max={previewData.rows.length}
+                      value={rowIndexToDisplay}
+                      onChange={handleOnRowIndexToDisplayChange}
+                      placeholder="0"
+                      className="flex-1 text-right"
+                    />
+                    <label htmlFor="rowCutCount">行目から表示</label>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

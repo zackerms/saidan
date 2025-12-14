@@ -32,7 +32,12 @@ export function SplitterPreview({
   const [hoveredColumnLineIndex, setHoveredColumnLineIndex] = useState<
     number | null
   >(null);
+  const [mousePosition, setMousePosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const columnCount = useMemo(() => {
     return rows.length > 0 ? rows[0].length : 0;
@@ -112,9 +117,27 @@ export function SplitterPreview({
     [onRowCutLineClick, rowIndexToCut]
   );
 
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setMousePosition({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setMousePosition(null);
+  }, []);
+
   return (
     <div className="space-y-4">
-      <div className="relative" ref={tableRef}>
+      <div
+        className="relative"
+        ref={containerRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
         <div className="overflow-x-auto">
           <table className="w-full" ref={tableRef}>
             <tbody>
@@ -172,6 +195,21 @@ export function SplitterPreview({
               />
             );
           }
+        )}
+        {/* マウス位置にハサミアイコンを表示 */}
+        {mousePosition && (
+          <div
+            className="absolute pointer-events-none z-30"
+            style={{
+              left: `${mousePosition.x}px`,
+              top: `${mousePosition.y}px`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <div className="rounded-full p-1 shadow-md">
+              <Scissors className="h-6 w-6 text-primary" />
+            </div>
+          </div>
         )}
       </div>
     </div>

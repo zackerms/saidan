@@ -1,56 +1,66 @@
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useRef, useCallback } from 'react';
 import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useCsvProcessor } from '@/hooks/useCsvProcessor';
+import { useCsvProcessor, type CsvFileData } from '@/hooks/useCsvProcessor';
 
 interface CsvUploaderProps {
-  onCsvLoaded: (data: { rows: string[][] }, filename: string) => void;
+  onCsvLoaded: (data: CsvFileData[]) => void;
 }
 
 export function CsvUploader({ onCsvLoaded }: CsvUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { csvData, parseCsv, error, isProcessing } = useCsvProcessor();
-
-  const [originalFilename, setOriginalFilename] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (csvData && !error && originalFilename) {
-      onCsvLoaded(csvData, originalFilename);
-    }
-  }, [csvData, error, originalFilename, onCsvLoaded]);
+  const { parseMultipleCsv, error, isProcessing } = useCsvProcessor();
 
   const handleFileSelect = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files || []);
+      if (files.length === 0) return;
 
-      if (!file.name.endsWith('.csv')) {
+      const csvFiles = files.filter((file) => file.name.endsWith('.csv'));
+      if (csvFiles.length === 0) {
         alert('CSVファイルを選択してください');
         return;
       }
 
-      setOriginalFilename(file.name);
-      parseCsv(file);
+      if (csvFiles.length !== files.length) {
+        alert('CSVファイル以外が含まれています。CSVファイルのみ処理されます。');
+      }
+
+      try {
+        const results = await parseMultipleCsv(csvFiles);
+        onCsvLoaded(results);
+      } catch {
+        // エラーはparseMultipleCsv内で設定される
+      }
     },
-    [parseCsv]
+    [parseMultipleCsv, onCsvLoaded]
   );
 
   const handleDrop = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
+    async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
-      const file = event.dataTransfer.files[0];
-      if (!file) return;
+      const files = Array.from(event.dataTransfer.files);
+      if (files.length === 0) return;
 
-      if (!file.name.endsWith('.csv')) {
+      const csvFiles = files.filter((file) => file.name.endsWith('.csv'));
+      if (csvFiles.length === 0) {
         alert('CSVファイルを選択してください');
         return;
       }
 
-      setOriginalFilename(file.name);
-      parseCsv(file);
+      if (csvFiles.length !== files.length) {
+        alert('CSVファイル以外が含まれています。CSVファイルのみ処理されます。');
+      }
+
+      try {
+        const results = await parseMultipleCsv(csvFiles);
+        onCsvLoaded(results);
+      } catch {
+        // エラーはparseMultipleCsv内で設定される
+      }
     },
-    [parseCsv]
+    [parseMultipleCsv, onCsvLoaded]
   );
 
   const handleDragOver = useCallback(
@@ -75,7 +85,7 @@ export function CsvUploader({ onCsvLoaded }: CsvUploaderProps) {
           <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <p className="text-lg font-medium mb-2">CSVファイルをアップロード</p>
           <p className="text-sm text-gray-500 mb-4">
-            ファイルをドラッグ&ドロップするか、ボタンをクリックして選択
+            ファイルをドラッグ&ドロップするか、ボタンをクリックして選択（複数選択可）
           </p>
           <Button onClick={handleButtonClick} disabled={isProcessing}>
             {isProcessing ? '処理中...' : 'ファイルを選択'}
@@ -84,6 +94,7 @@ export function CsvUploader({ onCsvLoaded }: CsvUploaderProps) {
             ref={fileInputRef}
             type="file"
             accept=".csv"
+            multiple
             onChange={handleFileSelect}
             className="hidden"
           />
