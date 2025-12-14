@@ -214,14 +214,12 @@ const Row = ({
   );
 
   const isInCutRowRange = useMemo(
-    () => rowIndexToCut !== null && rowIndex < rowIndexToCut,
+    () => rowIndexToCut !== null && rowIndex <= rowIndexToCut,
     [rowIndexToCut, rowIndex]
   );
 
   return (
-    <tr
-      className={`relative ${isRowCut && isInCutRowRange ? 'bg-red-500/20' : ''}`}
-    >
+    <tr className={`relative ${isInCutRowRange ? 'bg-red-500/20' : ''}`}>
       {row.map((cell, cellIndex) => (
         <Cell
           key={cellIndex}
