@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,6 @@ function App() {
     null
   );
   const { downloadCsv, downloadMultiple } = useDownload();
-  const { theme, toggleTheme } = useTheme();
   const {
     originalData,
     setData,
@@ -40,17 +39,6 @@ function App() {
     reset: resetCutter,
     revert,
   } = useCutter();
-
-  // 現在のテーマに応じたアイコンを取得
-  const themeIcon = useMemo(() => {
-    if (theme === 'light') {
-      return <Sun className="h-5 w-5" />;
-    } else if (theme === 'dark') {
-      return <Moon className="h-5 w-5" />;
-    } else {
-      return <Monitor className="h-5 w-5" />;
-    }
-  }, [theme]);
 
   const handleOnRowIndexToDisplayChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,6 +137,141 @@ function App() {
     );
   };
 
+  if (!originalData) {
+    return (
+      <Layout>
+        <CsvUploader onCsvLoaded={handleCsvLoaded} />
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <div className="flex flex-col gap-6">
+        <div className="space-y-4 flex-1">
+          <Card>
+            <CardContent className="space-y-4">
+              <SplitterPreview
+                rows={originalData.rows}
+                columnIndexToCut={numberOfColumnsToCut}
+                rowIndexToDisplay={rowIndexToDisplay}
+                rowIndexToCut={rowIndexToCut}
+                onColumnCutLineClick={(index) =>
+                  setNumberOfColumnsToCut(index + 1)
+                }
+                onRowCutLineClick={handleRowCutLineClick}
+              />
+              <div className="flex flex-row gap-2 justify-self-end items-center w-[200px]">
+                <Input
+                  id="rowCutCount"
+                  type="number"
+                  min="0"
+                  max={originalData.rows.length}
+                  value={rowIndexToDisplay}
+                  onChange={handleOnRowIndexToDisplayChange}
+                  placeholder="0"
+                  className="flex-1 text-right"
+                />
+                <label htmlFor="rowCutCount">行目から表示</label>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* フォーム（画面下部） */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="rowsPerFile"
+                  className="block text-sm font-medium mb-2"
+                >
+                  1ファイルあたりの行数
+                </label>
+                <Input
+                  id="rowsPerFile"
+                  type="number"
+                  min="1"
+                  value={localRowsPerFile}
+                  onChange={(e) => {
+                    const value = Number.parseInt(e.target.value) || 0;
+                    setLocalRowsPerFile(value);
+                  }}
+                  placeholder="100"
+                />
+              </div>
+              <div className="flex flex-row gap-2 w-full">
+                <Button
+                  onClick={handleRevert}
+                  variant="outline"
+                  size="lg"
+                  className="flex-1 rounded-full"
+                >
+                  <RotateCcw className="mr-2 h-5 w-5" />
+                  もとに戻す
+                </Button>
+                <Button
+                  onClick={handleSaidan}
+                  disabled={getSaidanButtonDisabled()}
+                  variant="default"
+                  size="lg"
+                  className="flex-1 rounded-full"
+                >
+                  <Scissors className="mr-2 h-5 w-5" />
+                  サイダン！
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* アクションボタン */}
+        {processedData && (
+          <Card>
+            <CardContent>
+              <div className="space-y-3">
+                <Button
+                  onClick={handleDownload}
+                  variant="default"
+                  size="lg"
+                  className="w-full rounded-full"
+                >
+                  <Download className="mr-2 h-5 w-5" />
+                  {Array.isArray(processedData) && processedData.length > 0
+                    ? `${processedData.length}個のファイルをダウンロード`
+                    : 'ダウンロード'}
+                </Button>
+                <Button
+                  onClick={handleReset}
+                  variant="outline"
+                  size="lg"
+                  className="w-full rounded-full"
+                >
+                  <Upload className="mr-2 h-5 w-5" />
+                  別のファイルを編集
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </Layout>
+  );
+}
+
+const Layout = memo(({ children }: { children: React.ReactNode }) => {
+  const { theme, toggleTheme } = useTheme();
+  const themeIcon = useMemo(() => {
+    if (theme === 'light') {
+      return <Sun className="h-5 w-5" />;
+    } else if (theme === 'dark') {
+      return <Moon className="h-5 w-5" />;
+    } else {
+      return <Monitor className="h-5 w-5" />;
+    }
+  }, [theme]);
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -170,127 +293,10 @@ function App() {
             </Button>
           </div>
         </div>
-
-        {!originalData ? (
-          <CsvUploader onCsvLoaded={handleCsvLoaded} />
-        ) : (
-          <div className="flex flex-col gap-6">
-            <div className="space-y-4 flex-1">
-              <Card>
-                <CardContent className="space-y-4">
-                  <SplitterPreview
-                    rows={originalData.rows}
-                    columnIndexToCut={numberOfColumnsToCut}
-                    rowIndexToDisplay={rowIndexToDisplay}
-                    rowIndexToCut={rowIndexToCut}
-                    onColumnCutLineClick={(index) =>
-                      setNumberOfColumnsToCut(index + 1)
-                    }
-                    onRowCutLineClick={handleRowCutLineClick}
-                  />
-                  <div
-                    className="flex flex-row gap-2 justify-self-end items-center w-[200px]"
-                  >
-                    <Input
-                      id="rowCutCount"
-                      type="number"
-                      min="0"
-                      max={originalData.rows.length}
-                      value={rowIndexToDisplay}
-                      onChange={handleOnRowIndexToDisplayChange}
-                      placeholder="0"
-                      className="flex-1 text-right"
-                    />
-                    <label htmlFor="rowCutCount">行目から表示</label>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* フォーム（画面下部） */}
-            {originalData && !processedData && (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label
-                        htmlFor="rowsPerFile"
-                        className="block text-sm font-medium mb-2"
-                      >
-                        1ファイルあたりの行数
-                      </label>
-                      <Input
-                        id="rowsPerFile"
-                        type="number"
-                        min="1"
-                        value={localRowsPerFile}
-                        onChange={(e) => {
-                          const value = Number.parseInt(e.target.value) || 0;
-                          setLocalRowsPerFile(value);
-                        }}
-                        placeholder="100"
-                      />
-                    </div>
-                    <div className="flex flex-row gap-2 w-full">
-                      <Button
-                        onClick={handleRevert}
-                        variant="outline"
-                        size="lg"
-                        className="flex-1 rounded-full"
-                      >
-                        <RotateCcw className="mr-2 h-5 w-5" />
-                        もとに戻す
-                      </Button>
-                      <Button
-                        onClick={handleSaidan}
-                        disabled={getSaidanButtonDisabled()}
-                        variant="default"
-                        size="lg"
-                        className="flex-1 rounded-full"
-                      >
-                        <Scissors className="mr-2 h-5 w-5" />
-                        サイダン！
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* アクションボタン */}
-            {processedData && (
-              <Card>
-                <CardContent>
-                  <div className="space-y-3">
-                    <Button
-                      onClick={handleDownload}
-                      variant="default"
-                      size="lg"
-                      className="w-full rounded-full"
-                    >
-                      <Download className="mr-2 h-5 w-5" />
-                      {Array.isArray(processedData) && processedData.length > 0
-                        ? `${processedData.length}個のファイルをダウンロード`
-                        : 'ダウンロード'}
-                    </Button>
-                    <Button
-                      onClick={handleReset}
-                      variant="outline"
-                      size="lg"
-                      className="w-full rounded-full"
-                    >
-                      <Upload className="mr-2 h-5 w-5" />
-                      別のファイルを編集
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
+        {children}
       </div>
     </div>
   );
-}
+});
 
 export default App;
