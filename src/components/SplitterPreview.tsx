@@ -244,8 +244,8 @@ export function SplitterPreview({
               <Scissors
                 className={`transition-all duration-200 ${
                   isNearBorder
-                    ? 'h-12 w-12 text-red-500'
-                    : 'h-6 w-6 text-primary'
+                    ? 'h-8 w-8 text-red-500'
+                    : 'h-4 w-4 text-primary'
                 }`}
               />
             </div>
