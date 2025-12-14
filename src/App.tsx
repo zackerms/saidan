@@ -151,6 +151,7 @@ function App() {
         <div className="space-y-4 flex-1">
           <Card>
             <CardContent className="space-y-4">
+              <h2 className="text-lg font-bold">サイダン</h2>
               <SplitterPreview
                 rows={originalData.rows}
                 columnIndexToCut={numberOfColumnsToCut}
@@ -180,7 +181,8 @@ function App() {
 
         {/* フォーム（画面下部） */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent>
+            <h2 className="text-lg font-bold">ブンカツ</h2>
             <div className="space-y-4">
               <div>
                 <label
