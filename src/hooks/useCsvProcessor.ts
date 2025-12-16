@@ -20,6 +20,7 @@ export function useCsvProcessor() {
     setError(null);
 
     Papa.parse(file, {
+      delimiter: ',',
       complete: (results) => {
         if (results.errors.length > 0) {
           setError(results.errors.map((e) => e.message).join(', '));
@@ -54,6 +55,7 @@ export function useCsvProcessor() {
       const parsePromises = files.map((file) => {
         return new Promise<CsvFileData>((resolve, reject) => {
           Papa.parse(file, {
+            delimiter: ',',
             complete: (results) => {
               if (results.errors.length > 0) {
                 reject(
