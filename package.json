@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "deploy": "docker buildx build --platform linux/amd64 -t asia-northeast1-docker.pkg.dev/orbital-476503/saidan/saidan:latest . && docker push asia-northeast1-docker.pkg.dev/orbital-476503/saidan/saidan:latest",
     "lint": "eslint .",
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"*.{js,ts,json,css,html,md}\" \"components.json\" \"tailwind.config.js\" \"vite.config.ts\" \"eslint.config.js\""
