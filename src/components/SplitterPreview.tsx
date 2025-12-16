@@ -4,6 +4,7 @@ import { Scissors } from 'lucide-react';
 interface SplitterPreviewProps {
   rows: string[][];
   rowHeight?: number;
+  rowCounterWidth?: number;
   rowCountToDisplay?: number;
   columnIndexToCut: number | null;
   rowIndexToDisplay: number | null;
@@ -19,6 +20,7 @@ export function SplitterPreview({
   rows,
   rowHeight = 40,
   rowCountToDisplay = 10,
+  rowCounterWidth = 60,
   columnIndexToCut,
   rowIndexToDisplay,
   rowIndexToCut,
@@ -53,9 +55,9 @@ export function SplitterPreview({
       const offsetX = columnWidths
         .slice(0, index)
         .reduce((acc, curr) => acc + curr, 0);
-      return offsetX + width;
+      return offsetX + width + rowCounterWidth;
     });
-  }, [columnWidths]);
+  }, [columnWidths, rowCounterWidth]);
 
   const displayRows = useMemo(() => {
     const startIndex = rowIndexToDisplay ?? 0;
@@ -185,6 +187,7 @@ export function SplitterPreview({
                     rowHeight={rowHeight}
                     rowIndexToCut={rowIndexToCut}
                     rowIndexToDisplay={rowIndexToDisplay}
+                    rowCounterWidth={rowCounterWidth}
                     columnIndexToCut={columnIndexToCut}
                     columnCount={columnCount}
                     hoveredColumnLineIndex={hoveredColumnLineIndex}
@@ -261,6 +264,7 @@ const Row = ({
   rowIndex,
   rowIndexInTable,
   rowHeight,
+  rowCounterWidth,
   rowIndexToCut,
   columnCount,
   columnIndexToCut,
@@ -277,6 +281,7 @@ const Row = ({
   rowIndexToCut: number | null;
   rowIndexToDisplay: number | null;
   rowHeight: number;
+  rowCounterWidth: number;
   columnCount: number;
   columnIndexToCut: number | null;
   hoveredColumnLineIndex: number | null;
@@ -298,6 +303,22 @@ const Row = ({
 
   return (
     <tr className={`relative ${isInCutRowRange ? 'bg-red-500/20' : ''}`}>
+      {/* 行番号列 */}
+      <td
+        className="bg-muted/30 text-sm text-center font-mono sticky left-0 z-10"
+        style={{
+          height: rowHeight,
+          boxSizing: 'border-box',
+          paddingLeft: 10,
+          paddingRight: 10,
+          paddingTop: 0,
+          paddingBottom: 0,
+          minWidth: `${rowCounterWidth}px`,
+          width: `${rowCounterWidth}px`,
+        }}
+      >
+        {rowIndex + 1}
+      </td>
       {row.map((cell, cellIndex) => (
         <Cell
           key={cellIndex}
